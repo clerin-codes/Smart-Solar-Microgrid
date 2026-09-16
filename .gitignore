@@ -1,0 +1,109 @@
+# ==========================================
+# Smart Solar Microgrid - Root Git Ignore
+# ==========================================
+
+# -------------------------
+# OS / File System
+# -------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# -------------------------
+# IDE / Editors
+# -------------------------
+.vscode/
+.idea/
+*.iml
+
+# -------------------------
+# Android / Gradle
+# -------------------------
+.gradle/
+**/.gradle/
+**/build/
+**/captures/
+**/.cxx/
+**/.externalNativeBuild/
+
+local.properties
+
+*.apk
+*.aab
+*.apks
+
+# Android Studio generated files
+.navigation/
+*.hprof
+
+# -------------------------
+# Kotlin / Java
+# -------------------------
+*.class
+
+# -------------------------
+# .NET / ASP.NET Core
+# -------------------------
+**/bin/
+**/obj/
+
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# ASP.NET local development
+**/appsettings.Development.json
+**/appsettings.Local.json
+**/appsettings.*.local.json
+
+# -------------------------
+# Node.js / React / Vite
+# -------------------------
+**/node_modules/
+**/dist/
+**/.vite/
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# -------------------------
+# Environment / Secrets
+# -------------------------
+.env
+.env.*
+!.env.example
+
+# -------------------------
+# Logs
+# -------------------------
+*.log
+logs/
+
+# -------------------------
+# Coverage / Testing
+# -------------------------
+coverage/
+.nyc_output/
+
+# -------------------------
+# Temporary files
+# -------------------------
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# -------------------------
+# Build / Cache
+# -------------------------
+.cache/
+.parcel-cache/
+
+# -------------------------
+# Backup files
+# -------------------------
+*.bak
+*.backup
