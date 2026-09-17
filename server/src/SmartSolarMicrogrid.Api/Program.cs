@@ -64,6 +64,9 @@ if (app.Environment.IsDevelopment())
 // Temporarily comment this while testing HTTP localhost
 // app.UseHttpsRedirection();
 
+// Liveness Check
+app.MapGet("/health", () => Results.Ok(new { status = "OK" }));
+
 // MongoDB Connection Test
 app.MapGet("/api/health", async (IMongoDatabase database) =>
 {
