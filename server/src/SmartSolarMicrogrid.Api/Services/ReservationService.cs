@@ -33,7 +33,10 @@ public class ReservationService : IReservationService
         string prosumerNIC,
         CreateReservationDto request)
     {
-        // Check Prosumer
+        // =====================================================
+        // CHECK PROSUMER
+        // =====================================================
+
         var user =
             await _userRepository.GetByNICAsync(
                 prosumerNIC);
@@ -56,7 +59,11 @@ public class ReservationService : IReservationService
                 "Only Prosumer users can create reservations.");
         }
 
-        // Check Station
+
+        // =====================================================
+        // CHECK STATION
+        // =====================================================
+
         var station =
             await _stationRepository.GetByIdAsync(
                 request.StationId);
@@ -73,7 +80,11 @@ public class ReservationService : IReservationService
                 "Station is inactive.");
         }
 
-        // Check Slot
+
+        // =====================================================
+        // CHECK SLOT
+        // =====================================================
+
         var slot =
             await _slotRepository.GetByIdAsync(
                 request.SlotId);
@@ -90,12 +101,17 @@ public class ReservationService : IReservationService
                 "Slot does not belong to the selected station.");
         }
 
+
         // =====================================================
         // 7-DAY BOOKING RULE
         // =====================================================
 
-        var today = DateTime.UtcNow.Date;
-        var maximumDate = today.AddDays(7);
+        var today =
+            DateTime.UtcNow.Date;
+
+        var maximumDate =
+            today.AddDays(7);
+
 
         // Prevent past reservations
         if (request.ReservationDate.Date < today)
@@ -104,6 +120,7 @@ public class ReservationService : IReservationService
                 "Reservation date cannot be in the past.");
         }
 
+
         // Prevent reservations more than 7 days ahead
         if (request.ReservationDate.Date > maximumDate)
         {
@@ -111,25 +128,62 @@ public class ReservationService : IReservationService
                 "Reservation must be within the next 7 days.");
         }
 
+
         // =====================================================
-        // DUPLICATE RESERVATION CHECK
+        // SAME USER ACTIVE RESERVATION CHECK
         // =====================================================
 
-        var duplicate =
+        var existingForUser =
             await _reservationRepository
-                .HasDuplicateReservationAsync(
+                .GetActiveReservationForProsumerAsync(
                     prosumerNIC,
                     request.SlotId,
                     request.ReservationDate);
 
-        if (duplicate)
+
+        if (existingForUser != null)
         {
-            throw new InvalidOperationException(
-                "You already have a reservation for this slot.");
+            // Same user already has a Pending reservation
+            if (existingForUser.Status ==
+                ReservationStatus.Pending)
+            {
+                throw new InvalidOperationException(
+                    "You have already applied for this date and time. Please wait for the approval or rejection result.");
+            }
+
+
+            // Same user already has an Approved reservation
+            if (existingForUser.Status ==
+                ReservationStatus.Approved)
+            {
+                throw new InvalidOperationException(
+                    "You already have an approved reservation for this date and time.");
+            }
         }
 
+
         // =====================================================
-        // SLOT AVAILABILITY
+        // GLOBAL SLOT RESERVATION CHECK
+        // =====================================================
+        // Prevent another Prosumer from reserving
+        // the same slot on the same date.
+
+        var existingForSlot =
+            await _reservationRepository
+                .GetActiveReservationForSlotAsync(
+                    request.SlotId,
+                    request.ReservationDate);
+
+
+        if (existingForSlot != null)
+        {
+            throw new InvalidOperationException(
+                "This energy slot is already reserved. Please select another available slot.");
+        }
+
+
+        // =====================================================
+        // SLOT CAPACITY CHECK
         // =====================================================
 
         if (slot.AvailableCapacityKw <= 0)
@@ -138,48 +192,52 @@ public class ReservationService : IReservationService
                 "Selected slot is full.");
         }
 
+
         // =====================================================
         // CREATE RESERVATION
         // =====================================================
 
-        var reservation = new EnergyReservation
-        {
-            ReservationNumber =
-                GenerateReservationNumber(),
+        var reservation =
+            new EnergyReservation
+            {
+                ReservationNumber =
+                    GenerateReservationNumber(),
 
-            ProsumerNIC =
-                prosumerNIC,
+                ProsumerNIC =
+                    prosumerNIC,
 
-            StationId =
-                request.StationId,
+                StationId =
+                    request.StationId,
 
-            SlotId =
-                request.SlotId,
+                SlotId =
+                    request.SlotId,
 
-            ReservationDate =
-                request.ReservationDate.Date,
+                ReservationDate =
+                    request.ReservationDate.Date,
 
-            StartTime =
-                slot.StartTime,
+                StartTime =
+                    slot.StartTime,
 
-            EndTime =
-                slot.EndTime,
+                EndTime =
+                    slot.EndTime,
 
-            Status =
-                ReservationStatus.Pending,
+                Status =
+                    ReservationStatus.Pending,
 
-            TransactionStatus =
-                TransactionStatus.NotStarted,
+                TransactionStatus =
+                    TransactionStatus.NotStarted,
 
-            CreatedAt =
-                DateTime.UtcNow,
+                CreatedAt =
+                    DateTime.UtcNow,
 
-            UpdatedAt =
-                DateTime.UtcNow
-        };
+                UpdatedAt =
+                    DateTime.UtcNow
+            };
+
 
         await _reservationRepository
             .CreateAsync(reservation);
+
 
         return reservation;
     }
@@ -219,7 +277,10 @@ public class ReservationService : IReservationService
         string reservationId,
         UpdateReservationDto request)
     {
-        // Find reservation
+        // =====================================================
+        // FIND RESERVATION
+        // =====================================================
+
         var reservation =
             await _reservationRepository
                 .GetByIdAsync(reservationId);
@@ -230,12 +291,17 @@ public class ReservationService : IReservationService
                 "Reservation not found.");
         }
 
-        // Only owner can update
+
+        // =====================================================
+        // ONLY OWNER CAN UPDATE
+        // =====================================================
+
         if (reservation.ProsumerNIC != prosumerNIC)
         {
             throw new UnauthorizedAccessException(
                 "You can only update your own reservation.");
         }
+
 
         // =====================================================
         // 12-HOUR RULE
@@ -248,18 +314,25 @@ public class ReservationService : IReservationService
         var hoursRemaining =
             reservationStart - DateTime.UtcNow;
 
+
         if (hoursRemaining.TotalHours < 12)
         {
             throw new InvalidOperationException(
                 "Reservation can only be updated at least 12 hours before the scheduled time.");
         }
 
-        // Only Pending reservations can be updated
-        if (reservation.Status != ReservationStatus.Pending)
+
+        // =====================================================
+        // ONLY PENDING RESERVATIONS CAN BE UPDATED
+        // =====================================================
+
+        if (reservation.Status !=
+            ReservationStatus.Pending)
         {
             throw new InvalidOperationException(
                 "Only pending reservations can be updated.");
         }
+
 
         // =====================================================
         // CHECK NEW SLOT
@@ -275,6 +348,7 @@ public class ReservationService : IReservationService
                 "Slot not found.");
         }
 
+
         // New slot must belong to same station
         if (slot.StationId != reservation.StationId)
         {
@@ -282,12 +356,92 @@ public class ReservationService : IReservationService
                 "Slot does not belong to the reservation station.");
         }
 
-        // New slot must have capacity
+
+        // =====================================================
+        // CHECK NEW RESERVATION DATE
+        // =====================================================
+
+        var today =
+            DateTime.UtcNow.Date;
+
+        var maximumDate =
+            today.AddDays(7);
+
+
+        if (request.ReservationDate.Date < today)
+        {
+            throw new InvalidOperationException(
+                "Reservation date cannot be in the past.");
+        }
+
+
+        if (request.ReservationDate.Date > maximumDate)
+        {
+            throw new InvalidOperationException(
+                "Reservation must be within the next 7 days.");
+        }
+
+
+        // =====================================================
+        // CHECK NEW SLOT AVAILABILITY
+        // =====================================================
+
         if (slot.AvailableCapacityKw <= 0)
         {
             throw new InvalidOperationException(
                 "Selected slot is full.");
         }
+
+
+        // =====================================================
+        // CHECK DUPLICATE ACTIVE RESERVATION
+        // =====================================================
+
+        var existingForUser =
+            await _reservationRepository
+                .GetActiveReservationForProsumerAsync(
+                    prosumerNIC,
+                    request.SlotId,
+                    request.ReservationDate);
+
+
+        if (existingForUser != null &&
+            existingForUser.Id != reservation.Id)
+        {
+            if (existingForUser.Status ==
+                ReservationStatus.Pending)
+            {
+                throw new InvalidOperationException(
+                    "You have already applied for this date and time. Please wait for the approval or rejection result.");
+            }
+
+            if (existingForUser.Status ==
+                ReservationStatus.Approved)
+            {
+                throw new InvalidOperationException(
+                    "You already have an approved reservation for this date and time.");
+            }
+        }
+
+
+        // =====================================================
+        // CHECK GLOBAL SLOT RESERVATION
+        // =====================================================
+
+        var existingForSlot =
+            await _reservationRepository
+                .GetActiveReservationForSlotAsync(
+                    request.SlotId,
+                    request.ReservationDate);
+
+
+        if (existingForSlot != null &&
+            existingForSlot.Id != reservation.Id)
+        {
+            throw new InvalidOperationException(
+                "This energy slot is already reserved. Please select another available slot.");
+        }
+
 
         // =====================================================
         // UPDATE RESERVATION
@@ -308,8 +462,10 @@ public class ReservationService : IReservationService
         reservation.UpdatedAt =
             DateTime.UtcNow;
 
+
         await _reservationRepository
             .UpdateAsync(reservation);
+
 
         return reservation;
     }
@@ -323,6 +479,10 @@ public class ReservationService : IReservationService
         string prosumerNIC,
         string reservationId)
     {
+        // =====================================================
+        // FIND RESERVATION
+        // =====================================================
+
         var reservation =
             await _reservationRepository
                 .GetByIdAsync(reservationId);
@@ -333,12 +493,17 @@ public class ReservationService : IReservationService
                 "Reservation not found.");
         }
 
-        // Only owner can cancel
+
+        // =====================================================
+        // ONLY OWNER CAN CANCEL
+        // =====================================================
+
         if (reservation.ProsumerNIC != prosumerNIC)
         {
             throw new UnauthorizedAccessException(
                 "You can only cancel your own reservation.");
         }
+
 
         // =====================================================
         // 12-HOUR RULE
@@ -351,25 +516,37 @@ public class ReservationService : IReservationService
         var hoursRemaining =
             reservationStart - DateTime.UtcNow;
 
+
         if (hoursRemaining.TotalHours < 12)
         {
             throw new InvalidOperationException(
                 "Reservation can only be cancelled at least 12 hours before the scheduled time.");
         }
 
-        // Completed reservation cannot be cancelled
-        if (reservation.Status == ReservationStatus.Completed)
+
+        // =====================================================
+        // COMPLETED RESERVATION CANNOT BE CANCELLED
+        // =====================================================
+
+        if (reservation.Status ==
+            ReservationStatus.Completed)
         {
             throw new InvalidOperationException(
                 "Completed reservations cannot be cancelled.");
         }
 
-        // Already cancelled
-        if (reservation.Status == ReservationStatus.Cancelled)
+
+        // =====================================================
+        // ALREADY CANCELLED
+        // =====================================================
+
+        if (reservation.Status ==
+            ReservationStatus.Cancelled)
         {
             throw new InvalidOperationException(
                 "Reservation is already cancelled.");
         }
+
 
         // =====================================================
         // CANCEL
@@ -380,6 +557,7 @@ public class ReservationService : IReservationService
 
         reservation.UpdatedAt =
             DateTime.UtcNow;
+
 
         await _reservationRepository
             .UpdateAsync(reservation);
@@ -414,11 +592,13 @@ public class ReservationService : IReservationService
                 "Operator account is inactive.");
         }
 
-        if (operatorUser.Role != UserRole.GridOperator)
+        if (operatorUser.Role !=
+            UserRole.GridOperator)
         {
             throw new UnauthorizedAccessException(
                 "Only Grid Operators can approve reservations.");
         }
+
 
         // =====================================================
         // FIND RESERVATION
@@ -434,11 +614,14 @@ public class ReservationService : IReservationService
                 "Reservation not found.");
         }
 
-        if (reservation.Status != ReservationStatus.Pending)
+
+        if (reservation.Status !=
+            ReservationStatus.Pending)
         {
             throw new InvalidOperationException(
                 "Only pending reservations can be approved.");
         }
+
 
         // =====================================================
         // APPROVE
@@ -459,8 +642,10 @@ public class ReservationService : IReservationService
         reservation.UpdatedAt =
             DateTime.UtcNow;
 
+
         await _reservationRepository
             .UpdateAsync(reservation);
+
 
         return reservation;
     }
@@ -494,11 +679,13 @@ public class ReservationService : IReservationService
                 "Operator account is inactive.");
         }
 
-        if (operatorUser.Role != UserRole.GridOperator)
+        if (operatorUser.Role !=
+            UserRole.GridOperator)
         {
             throw new UnauthorizedAccessException(
                 "Only Grid Operators can verify QR codes.");
         }
+
 
         // =====================================================
         // FIND QR
@@ -512,11 +699,13 @@ public class ReservationService : IReservationService
             reservations.FirstOrDefault(
                 x => x.QRToken == qrToken);
 
+
         if (reservation == null)
         {
             throw new KeyNotFoundException(
                 "Invalid QR token.");
         }
+
 
         // QR can only be verified for Approved reservation
         if (reservation.Status !=
@@ -525,6 +714,7 @@ public class ReservationService : IReservationService
             throw new InvalidOperationException(
                 "Reservation is not approved.");
         }
+
 
         // =====================================================
         // VERIFY TRANSACTION
@@ -536,8 +726,10 @@ public class ReservationService : IReservationService
         reservation.UpdatedAt =
             DateTime.UtcNow;
 
+
         await _reservationRepository
             .UpdateAsync(reservation);
+
 
         return reservation;
     }
@@ -571,11 +763,13 @@ public class ReservationService : IReservationService
                 "Operator account is inactive.");
         }
 
-        if (operatorUser.Role != UserRole.GridOperator)
+        if (operatorUser.Role !=
+            UserRole.GridOperator)
         {
             throw new UnauthorizedAccessException(
                 "Only Grid Operators can complete reservations.");
         }
+
 
         // =====================================================
         // FIND RESERVATION
@@ -591,6 +785,7 @@ public class ReservationService : IReservationService
                 "Reservation not found.");
         }
 
+
         // QR must be verified first
         if (reservation.TransactionStatus !=
             TransactionStatus.Verified)
@@ -598,6 +793,7 @@ public class ReservationService : IReservationService
             throw new InvalidOperationException(
                 "Reservation QR must be verified before completion.");
         }
+
 
         // =====================================================
         // COMPLETE
@@ -618,8 +814,10 @@ public class ReservationService : IReservationService
         reservation.UpdatedAt =
             DateTime.UtcNow;
 
+
         await _reservationRepository
             .UpdateAsync(reservation);
+
 
         return reservation;
     }

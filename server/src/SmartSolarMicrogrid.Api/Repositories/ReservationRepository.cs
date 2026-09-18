@@ -30,7 +30,8 @@ public class ReservationRepository : IReservationRepository
     // Get Reservation By ID
     // ======================================================
 
-    public async Task<EnergyReservation?> GetByIdAsync(string id)
+    public async Task<EnergyReservation?> GetByIdAsync(
+        string id)
     {
         return await _collection
             .Find(x => x.Id == id)
@@ -52,19 +53,20 @@ public class ReservationRepository : IReservationRepository
 
 
     // ======================================================
-    // Check Duplicate Reservation
+    // Get Active Reservation For Same Prosumer
     // ======================================================
 
-    public async Task<bool> HasDuplicateReservationAsync(
-        string nic,
-        string slotId,
-        DateTime reservationDate)
+    public async Task<EnergyReservation?>
+        GetActiveReservationForProsumerAsync(
+            string nic,
+            string slotId,
+            DateTime reservationDate)
     {
-        // Start of the requested day
+        // Start of requested day
         var startOfDay =
             reservationDate.Date;
 
-        // Start of the next day
+        // Start of next day
         var startOfNextDay =
             startOfDay.AddDays(1);
 
@@ -77,14 +79,12 @@ public class ReservationRepository : IReservationRepository
                     x => x.ProsumerNIC,
                     nic),
 
-
                 // Same Slot
                 Builders<EnergyReservation>.Filter.Eq(
                     x => x.SlotId,
                     slotId),
 
-
-                // Reservation date is within the requested day
+                // Reservation date is within requested day
                 Builders<EnergyReservation>.Filter.Gte(
                     x => x.ReservationDate,
                     startOfDay),
@@ -93,8 +93,7 @@ public class ReservationRepository : IReservationRepository
                     x => x.ReservationDate,
                     startOfNextDay),
 
-
-                // Only active reservations count as duplicates
+                // Only Pending and Approved are active
                 Builders<EnergyReservation>.Filter.In(
                     x => x.Status,
                     new[]
@@ -107,7 +106,59 @@ public class ReservationRepository : IReservationRepository
 
         return await _collection
             .Find(filter)
-            .AnyAsync();
+            .FirstOrDefaultAsync();
+    }
+
+
+    // ======================================================
+    // Get Active Reservation For Slot
+    // ======================================================
+
+    public async Task<EnergyReservation?>
+        GetActiveReservationForSlotAsync(
+            string slotId,
+            DateTime reservationDate)
+    {
+        // Start of requested day
+        var startOfDay =
+            reservationDate.Date;
+
+        // Start of next day
+        var startOfNextDay =
+            startOfDay.AddDays(1);
+
+
+        var filter =
+            Builders<EnergyReservation>.Filter.And(
+
+                // Same Slot
+                Builders<EnergyReservation>.Filter.Eq(
+                    x => x.SlotId,
+                    slotId),
+
+                // Reservation date is within requested day
+                Builders<EnergyReservation>.Filter.Gte(
+                    x => x.ReservationDate,
+                    startOfDay),
+
+                Builders<EnergyReservation>.Filter.Lt(
+                    x => x.ReservationDate,
+                    startOfNextDay),
+
+                // Only Pending and Approved are active
+                Builders<EnergyReservation>.Filter.In(
+                    x => x.Status,
+                    new[]
+                    {
+                        ReservationStatus.Pending,
+                        ReservationStatus.Approved
+                    })
+            );
+
+
+        return await _collection
+            .Find(filter)
+            .FirstOrDefaultAsync();
     }
 
 
@@ -125,7 +176,6 @@ public class ReservationRepository : IReservationRepository
                 Builders<EnergyReservation>.Filter.Eq(
                     x => x.StationId,
                     stationId),
-
 
                 // Only active reservations
                 Builders<EnergyReservation>.Filter.In(
