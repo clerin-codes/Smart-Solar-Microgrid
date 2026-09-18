@@ -13,6 +13,20 @@ public class ReservationService : IReservationService
     private readonly ISlotRepository _slotRepository;
     private readonly IUserRepository _userRepository;
 
+    // =========================================================
+    // SRI LANKA TIMEZONE
+    // =========================================================
+
+    private static readonly TimeZoneInfo SriLankaTimeZone =
+        TimeZoneInfo.FindSystemTimeZoneById(
+            OperatingSystem.IsWindows()
+                ? "Sri Lanka Standard Time"
+                : "Asia/Colombo");
+
+    // =========================================================
+    // CONSTRUCTOR
+    // =========================================================
+
     public ReservationService(
         IReservationRepository reservationRepository,
         IStationRepository stationRepository,
@@ -23,6 +37,48 @@ public class ReservationService : IReservationService
         _stationRepository = stationRepository;
         _slotRepository = slotRepository;
         _userRepository = userRepository;
+    }
+
+    // =========================================================
+    // TIMEZONE HELPERS
+    // =========================================================
+
+    private static DateTime GetSriLankaNow()
+    {
+        return TimeZoneInfo.ConvertTimeFromUtc(
+            DateTime.UtcNow,
+            SriLankaTimeZone);
+    }
+
+    private static DateTime GetSriLankaToday()
+    {
+        return GetSriLankaNow().Date;
+    }
+
+    private static DateTime GetSriLankaDate(DateTime dateTime)
+    {
+        if (dateTime.Kind == DateTimeKind.Utc)
+        {
+            return TimeZoneInfo
+                .ConvertTimeFromUtc(
+                    dateTime,
+                    SriLankaTimeZone)
+                .Date;
+        }
+
+        if (dateTime.Kind == DateTimeKind.Local)
+        {
+            return TimeZoneInfo
+                .ConvertTimeFromUtc(
+                    dateTime.ToUniversalTime(),
+                    SriLankaTimeZone)
+                .Date;
+        }
+
+        // DateTimeKind.Unspecified
+        // API request dates such as "2026-09-21"
+        // are treated as Sri Lanka local dates.
+        return dateTime.Date;
     }
 
     // =========================================================
@@ -59,7 +115,6 @@ public class ReservationService : IReservationService
                 "Only Prosumer users can create reservations.");
         }
 
-
         // =====================================================
         // CHECK STATION
         // =====================================================
@@ -79,7 +134,6 @@ public class ReservationService : IReservationService
             throw new InvalidOperationException(
                 "Station is inactive.");
         }
-
 
         // =====================================================
         // CHECK SLOT
@@ -101,33 +155,43 @@ public class ReservationService : IReservationService
                 "Slot does not belong to the selected station.");
         }
 
+        // =====================================================
+        // CHECK SLOT DATE
+        // =====================================================
+
+        var slotDateInSriLanka =
+            GetSriLankaDate(slot.SlotDate);
+
+        var requestedDateInSriLanka =
+            GetSriLankaDate(request.ReservationDate);
+
+        if (slotDateInSriLanka != requestedDateInSriLanka)
+        {
+            throw new InvalidOperationException(
+                "Reservation date must match the selected slot date.");
+        }
 
         // =====================================================
         // 7-DAY BOOKING RULE
         // =====================================================
 
         var today =
-            DateTime.UtcNow.Date;
+            GetSriLankaToday();
 
         var maximumDate =
             today.AddDays(7);
 
-
-        // Prevent past reservations
-        if (request.ReservationDate.Date < today)
+        if (requestedDateInSriLanka < today)
         {
             throw new InvalidOperationException(
                 "Reservation date cannot be in the past.");
         }
 
-
-        // Prevent reservations more than 7 days ahead
-        if (request.ReservationDate.Date > maximumDate)
+        if (requestedDateInSriLanka > maximumDate)
         {
             throw new InvalidOperationException(
                 "Reservation must be within the next 7 days.");
         }
-
 
         // =====================================================
         // SAME USER ACTIVE RESERVATION CHECK
@@ -140,10 +204,8 @@ public class ReservationService : IReservationService
                     request.SlotId,
                     request.ReservationDate);
 
-
         if (existingForUser != null)
         {
-            // Same user already has a Pending reservation
             if (existingForUser.Status ==
                 ReservationStatus.Pending)
             {
@@ -151,8 +213,6 @@ public class ReservationService : IReservationService
                     "You have already applied for this date and time. Please wait for the approval or rejection result.");
             }
 
-
-            // Same user already has an Approved reservation
             if (existingForUser.Status ==
                 ReservationStatus.Approved)
             {
@@ -161,12 +221,9 @@ public class ReservationService : IReservationService
             }
         }
 
-
         // =====================================================
         // GLOBAL SLOT RESERVATION CHECK
         // =====================================================
-        // Prevent another Prosumer from reserving
-        // the same slot on the same date.
 
         var existingForSlot =
             await _reservationRepository
@@ -174,13 +231,11 @@ public class ReservationService : IReservationService
                     request.SlotId,
                     request.ReservationDate);
 
-
         if (existingForSlot != null)
         {
             throw new InvalidOperationException(
                 "This energy slot is already reserved. Please select another available slot.");
         }
-
 
         // =====================================================
         // SLOT CAPACITY CHECK
@@ -191,7 +246,6 @@ public class ReservationService : IReservationService
             throw new InvalidOperationException(
                 "Selected slot is full.");
         }
-
 
         // =====================================================
         // CREATE RESERVATION
@@ -213,7 +267,7 @@ public class ReservationService : IReservationService
                     request.SlotId,
 
                 ReservationDate =
-                    request.ReservationDate.Date,
+                    requestedDateInSriLanka,
 
                 StartTime =
                     slot.StartTime,
@@ -234,14 +288,11 @@ public class ReservationService : IReservationService
                     DateTime.UtcNow
             };
 
-
         await _reservationRepository
             .CreateAsync(reservation);
 
-
         return reservation;
     }
-
 
     // =========================================================
     // GET RESERVATION BY ID
@@ -254,7 +305,6 @@ public class ReservationService : IReservationService
             .GetByIdAsync(id);
     }
 
-
     // =========================================================
     // GET MY RESERVATIONS
     // =========================================================
@@ -266,7 +316,6 @@ public class ReservationService : IReservationService
         return await _reservationRepository
             .GetByProsumerAsync(prosumerNIC);
     }
-
 
     // =========================================================
     // UPDATE RESERVATION
@@ -291,7 +340,6 @@ public class ReservationService : IReservationService
                 "Reservation not found.");
         }
 
-
         // =====================================================
         // ONLY OWNER CAN UPDATE
         // =====================================================
@@ -301,26 +349,6 @@ public class ReservationService : IReservationService
             throw new UnauthorizedAccessException(
                 "You can only update your own reservation.");
         }
-
-
-        // =====================================================
-        // 12-HOUR RULE
-        // =====================================================
-
-        var reservationStart =
-            reservation.ReservationDate.Date
-                .Add(reservation.StartTime);
-
-        var hoursRemaining =
-            reservationStart - DateTime.UtcNow;
-
-
-        if (hoursRemaining.TotalHours < 12)
-        {
-            throw new InvalidOperationException(
-                "Reservation can only be updated at least 12 hours before the scheduled time.");
-        }
-
 
         // =====================================================
         // ONLY PENDING RESERVATIONS CAN BE UPDATED
@@ -332,7 +360,6 @@ public class ReservationService : IReservationService
             throw new InvalidOperationException(
                 "Only pending reservations can be updated.");
         }
-
 
         // =====================================================
         // CHECK NEW SLOT
@@ -348,39 +375,53 @@ public class ReservationService : IReservationService
                 "Slot not found.");
         }
 
+        // =====================================================
+        // NEW SLOT MUST BELONG TO SAME STATION
+        // =====================================================
 
-        // New slot must belong to same station
         if (slot.StationId != reservation.StationId)
         {
             throw new InvalidOperationException(
                 "Slot does not belong to the reservation station.");
         }
 
+        // =====================================================
+        // CHECK NEW SLOT DATE
+        // =====================================================
+
+        var slotDateInSriLanka =
+            GetSriLankaDate(slot.SlotDate);
+
+        var requestedDateInSriLanka =
+            GetSriLankaDate(request.ReservationDate);
+
+        if (slotDateInSriLanka != requestedDateInSriLanka)
+        {
+            throw new InvalidOperationException(
+                "Reservation date must match the selected slot date.");
+        }
 
         // =====================================================
         // CHECK NEW RESERVATION DATE
         // =====================================================
 
         var today =
-            DateTime.UtcNow.Date;
+            GetSriLankaToday();
 
         var maximumDate =
             today.AddDays(7);
 
-
-        if (request.ReservationDate.Date < today)
+        if (requestedDateInSriLanka < today)
         {
             throw new InvalidOperationException(
                 "Reservation date cannot be in the past.");
         }
 
-
-        if (request.ReservationDate.Date > maximumDate)
+        if (requestedDateInSriLanka > maximumDate)
         {
             throw new InvalidOperationException(
                 "Reservation must be within the next 7 days.");
         }
-
 
         // =====================================================
         // CHECK NEW SLOT AVAILABILITY
@@ -392,9 +433,32 @@ public class ReservationService : IReservationService
                 "Selected slot is full.");
         }
 
+        // =====================================================
+        // 12-HOUR RULE
+        // =====================================================
+
+        var now =
+            GetSriLankaNow();
+
+        var originalReservationDate =
+            GetSriLankaDate(
+                reservation.ReservationDate);
+
+        var reservationStart =
+            originalReservationDate
+                .Add(reservation.StartTime);
+
+        var hoursRemaining =
+            reservationStart - now;
+
+        if (hoursRemaining.TotalHours < 12)
+        {
+            throw new InvalidOperationException(
+                "Reservation can only be updated at least 12 hours before the scheduled time.");
+        }
 
         // =====================================================
-        // CHECK DUPLICATE ACTIVE RESERVATION
+        // CHECK SAME USER ACTIVE RESERVATION
         // =====================================================
 
         var existingForUser =
@@ -402,8 +466,7 @@ public class ReservationService : IReservationService
                 .GetActiveReservationForProsumerAsync(
                     prosumerNIC,
                     request.SlotId,
-                    request.ReservationDate);
-
+                    requestedDateInSriLanka);
 
         if (existingForUser != null &&
             existingForUser.Id != reservation.Id)
@@ -423,7 +486,6 @@ public class ReservationService : IReservationService
             }
         }
 
-
         // =====================================================
         // CHECK GLOBAL SLOT RESERVATION
         // =====================================================
@@ -432,8 +494,7 @@ public class ReservationService : IReservationService
             await _reservationRepository
                 .GetActiveReservationForSlotAsync(
                     request.SlotId,
-                    request.ReservationDate);
-
+                    requestedDateInSriLanka);
 
         if (existingForSlot != null &&
             existingForSlot.Id != reservation.Id)
@@ -441,7 +502,6 @@ public class ReservationService : IReservationService
             throw new InvalidOperationException(
                 "This energy slot is already reserved. Please select another available slot.");
         }
-
 
         // =====================================================
         // UPDATE RESERVATION
@@ -451,7 +511,7 @@ public class ReservationService : IReservationService
             request.SlotId;
 
         reservation.ReservationDate =
-            request.ReservationDate.Date;
+            requestedDateInSriLanka;
 
         reservation.StartTime =
             slot.StartTime;
@@ -462,14 +522,11 @@ public class ReservationService : IReservationService
         reservation.UpdatedAt =
             DateTime.UtcNow;
 
-
         await _reservationRepository
             .UpdateAsync(reservation);
 
-
         return reservation;
     }
-
 
     // =========================================================
     // CANCEL RESERVATION
@@ -493,7 +550,6 @@ public class ReservationService : IReservationService
                 "Reservation not found.");
         }
 
-
         // =====================================================
         // ONLY OWNER CAN CANCEL
         // =====================================================
@@ -503,26 +559,6 @@ public class ReservationService : IReservationService
             throw new UnauthorizedAccessException(
                 "You can only cancel your own reservation.");
         }
-
-
-        // =====================================================
-        // 12-HOUR RULE
-        // =====================================================
-
-        var reservationStart =
-            reservation.ReservationDate.Date
-                .Add(reservation.StartTime);
-
-        var hoursRemaining =
-            reservationStart - DateTime.UtcNow;
-
-
-        if (hoursRemaining.TotalHours < 12)
-        {
-            throw new InvalidOperationException(
-                "Reservation can only be cancelled at least 12 hours before the scheduled time.");
-        }
-
 
         // =====================================================
         // COMPLETED RESERVATION CANNOT BE CANCELLED
@@ -535,7 +571,6 @@ public class ReservationService : IReservationService
                 "Completed reservations cannot be cancelled.");
         }
 
-
         // =====================================================
         // ALREADY CANCELLED
         // =====================================================
@@ -547,6 +582,29 @@ public class ReservationService : IReservationService
                 "Reservation is already cancelled.");
         }
 
+        // =====================================================
+        // 12-HOUR RULE
+        // =====================================================
+
+        var now =
+            GetSriLankaNow();
+
+        var reservationDate =
+            GetSriLankaDate(
+                reservation.ReservationDate);
+
+        var reservationStart =
+            reservationDate
+                .Add(reservation.StartTime);
+
+        var hoursRemaining =
+            reservationStart - now;
+
+        if (hoursRemaining.TotalHours < 12)
+        {
+            throw new InvalidOperationException(
+                "Reservation can only be cancelled at least 12 hours before the scheduled time.");
+        }
 
         // =====================================================
         // CANCEL
@@ -558,11 +616,9 @@ public class ReservationService : IReservationService
         reservation.UpdatedAt =
             DateTime.UtcNow;
 
-
         await _reservationRepository
             .UpdateAsync(reservation);
     }
-
 
     // =========================================================
     // APPROVE RESERVATION
@@ -599,7 +655,6 @@ public class ReservationService : IReservationService
                 "Only Grid Operators can approve reservations.");
         }
 
-
         // =====================================================
         // FIND RESERVATION
         // =====================================================
@@ -614,14 +669,12 @@ public class ReservationService : IReservationService
                 "Reservation not found.");
         }
 
-
         if (reservation.Status !=
             ReservationStatus.Pending)
         {
             throw new InvalidOperationException(
                 "Only pending reservations can be approved.");
         }
-
 
         // =====================================================
         // APPROVE
@@ -642,14 +695,11 @@ public class ReservationService : IReservationService
         reservation.UpdatedAt =
             DateTime.UtcNow;
 
-
         await _reservationRepository
             .UpdateAsync(reservation);
 
-
         return reservation;
     }
-
 
     // =========================================================
     // VERIFY QR
@@ -686,7 +736,6 @@ public class ReservationService : IReservationService
                 "Only Grid Operators can verify QR codes.");
         }
 
-
         // =====================================================
         // FIND QR
         // =====================================================
@@ -699,22 +748,22 @@ public class ReservationService : IReservationService
             reservations.FirstOrDefault(
                 x => x.QRToken == qrToken);
 
-
         if (reservation == null)
         {
             throw new KeyNotFoundException(
                 "Invalid QR token.");
         }
 
+        // =====================================================
+        // QR CAN ONLY BE VERIFIED FOR APPROVED RESERVATION
+        // =====================================================
 
-        // QR can only be verified for Approved reservation
         if (reservation.Status !=
             ReservationStatus.Approved)
         {
             throw new InvalidOperationException(
                 "Reservation is not approved.");
         }
-
 
         // =====================================================
         // VERIFY TRANSACTION
@@ -726,14 +775,11 @@ public class ReservationService : IReservationService
         reservation.UpdatedAt =
             DateTime.UtcNow;
 
-
         await _reservationRepository
             .UpdateAsync(reservation);
 
-
         return reservation;
     }
-
 
     // =========================================================
     // COMPLETE RESERVATION
@@ -770,7 +816,6 @@ public class ReservationService : IReservationService
                 "Only Grid Operators can complete reservations.");
         }
 
-
         // =====================================================
         // FIND RESERVATION
         // =====================================================
@@ -785,15 +830,16 @@ public class ReservationService : IReservationService
                 "Reservation not found.");
         }
 
+        // =====================================================
+        // QR MUST BE VERIFIED FIRST
+        // =====================================================
 
-        // QR must be verified first
         if (reservation.TransactionStatus !=
             TransactionStatus.Verified)
         {
             throw new InvalidOperationException(
                 "Reservation QR must be verified before completion.");
         }
-
 
         // =====================================================
         // COMPLETE
@@ -814,14 +860,11 @@ public class ReservationService : IReservationService
         reservation.UpdatedAt =
             DateTime.UtcNow;
 
-
         await _reservationRepository
             .UpdateAsync(reservation);
 
-
         return reservation;
     }
-
 
     // =========================================================
     // GENERATE RESERVATION NUMBER
@@ -832,7 +875,6 @@ public class ReservationService : IReservationService
         return
             $"RES-{DateTime.UtcNow:yyyyMMddHHmmss}-{RandomNumberGenerator.GetInt32(1000, 9999)}";
     }
-
 
     // =========================================================
     // GENERATE SECURE QR TOKEN

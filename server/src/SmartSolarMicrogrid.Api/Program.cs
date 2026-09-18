@@ -296,40 +296,12 @@ catch (Exception ex)
 using (var scope =
     app.Services.CreateScope())
 {
-    try
-    {
-        var seedDataService =
-            scope.ServiceProvider
-                .GetRequiredService<
-                    SeedDataService>();
+    var seedDataService =
+        scope.ServiceProvider
+            .GetRequiredService<
+                SeedDataService>();
 
-
-        await seedDataService.SeedAsync();
-
-
-        Console.WriteLine(
-            "========================================");
-
-        Console.WriteLine(
-            "Database Seed: SUCCESS");
-
-        Console.WriteLine(
-            "========================================");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine(
-            "========================================");
-
-        Console.WriteLine(
-            "Database Seed: FAILED");
-
-        Console.WriteLine(
-            $"Error: {ex.Message}");
-
-        Console.WriteLine(
-            "========================================");
-    }
+    await seedDataService.SeedAsync();
 }
 
 
