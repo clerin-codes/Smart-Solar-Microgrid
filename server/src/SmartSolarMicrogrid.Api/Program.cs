@@ -317,42 +317,13 @@ if (app.Environment.IsDevelopment())
 }
 
 
-// ======================================================
-// 12. Global Exception Handling Middleware
-// ======================================================
+// Liveness Check
+app.MapGet("/health", () => Results.Ok(new { status = "OK" }));
 
-app.UseMiddleware<
-    ExceptionHandlingMiddleware>();
-
-
-// ======================================================
-// 13. Authentication Middleware
-// ======================================================
-
-app.UseAuthentication();
-
-
-// ======================================================
-// 14. Authorization Middleware
-// ======================================================
-
-app.UseAuthorization();
-
-
-// ======================================================
-// 15. Controller Mapping
-// ======================================================
-
-app.MapControllers();
-
-
-// ======================================================
-// 16. MongoDB Health Check
-// ======================================================
-
-app.MapGet(
-    "/api/health",
-    async (IMongoDatabase database) =>
+// MongoDB Connection Test
+app.MapGet("/api/health", async (IMongoDatabase database) =>
+{
+    try
     {
         try
         {
