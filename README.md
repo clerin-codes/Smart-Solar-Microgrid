@@ -78,7 +78,7 @@ Using MongoDB Compass, connect to your configured MongoDB instance.
 Example local connection:
 
 ```text
-mongodb://localhost:27017
+mongodb+srv://email_db_user:<password>@godatabase.mym8s5g.mongodb.net/SmartSolarMicrogrid?retryWrites=true&w=majority&authSource=admin
 ```
 
 The required database and collections are:
