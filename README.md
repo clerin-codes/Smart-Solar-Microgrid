@@ -46,10 +46,22 @@ You can also verify the API using Postman.
 If Swagger is enabled in the project, open:
 
 ```text
-http://localhost:5130/swagger
+http://localhost:5130/swagger/index.html
 ```
 
 > The exact Swagger availability depends on the project's current configuration.
+
+#### Demo Login Credentials
+
+Use these seeded/demo accounts when testing the API locally:
+
+| Role | NIC | Password |
+|---|---|---|
+| Solar Prosumer | `200000000003` | `Prosumer@123` |
+| Grid Operator | `200000000002` | `Operator@123` |
+| Backoffice Admin | `200000000001` | `Admin@123` |
+
+These credentials are for local or academic demonstration only. Do not reuse them in production.
 
 ---
 
@@ -66,7 +78,7 @@ Using MongoDB Compass, connect to your configured MongoDB instance.
 Example local connection:
 
 ```text
-mongodb://localhost:27017
+mongodb+srv://email_db_user:<password>@godatabase.mym8s5g.mongodb.net/SmartSolarMicrogrid?retryWrites=true&w=majority&authSource=admin
 ```
 
 The required database and collections are:
@@ -103,7 +115,7 @@ npm run dev
 Vite will normally provide a local address similar to:
 
 ```text
-http://localhost:5173
+mongodb+srv://mongo_db_user:<password>@godatabase.mym8s5g.mongodb.net/
 ```
 
 #### Verify Web Application

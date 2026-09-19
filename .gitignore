@@ -53,9 +53,10 @@ local.properties
 *.sln.docstates
 
 # ASP.NET local development
-**/appsettings.Development.json
 **/appsettings.Local.json
 **/appsettings.*.local.json
+**/appsettings.json
+!**/appsettings.example.json
 
 # -------------------------
 # Node.js / React / Vite
