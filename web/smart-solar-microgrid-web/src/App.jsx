@@ -1,122 +1,84 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { lazy, Suspense } from 'react'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
+import { AuthProvider } from './context/AuthContext'
+import ProfilePage from './components/Auth/ProfilePage'
+import UserManagement from './components/Auth/UserManagement'
+import ErrorBoundary from './components/Common/ErrorBoundary'
+import Layout from './components/Common/Layout'
+import ObjectIdRoute from './components/Common/ObjectIdRoute'
+import RoleBasedRoute from './components/Common/RoleBasedRoute'
+import QRScannerPage from './components/QRScanner/QRScannerPage'
+import TransactionDetail from './components/Transactions/TransactionDetail'
+import TransactionHistory from './components/Transactions/TransactionHistory'
+import TransactionList from './components/Transactions/TransactionList'
+import ReservationDetail from './components/Reservations/ReservationDetail'
+import ReservationList from './components/Reservations/ReservationList'
+import StationDetail from './components/Stations/StationDetail'
+import StationForm from './components/Stations/StationForm'
+import StationList from './components/Stations/StationList'
+import { Spinner } from './components/Common/ui'
+import DashboardPage from './pages/DashboardPage'
+import LoginPage from './pages/LoginPage'
+import NotFoundPage from './pages/NotFoundPage'
+import { ROLES } from './utils/constants'
 
-function App() {
-  const [count, setCount] = useState(0)
+const ReportsPage = lazy(() => import('./components/Reports/ReportsPage'))
 
+export default function App() {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <ErrorBoundary>
+      <AuthProvider>
+        <BrowserRouter>
+          <Toaster position="top-right" />
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
 
-      <div className="ticks"></div>
+            <Route element={<RoleBasedRoute />}>
+              <Route element={<Layout />}>
+                <Route index element={<DashboardPage />} />
+                <Route path="profile" element={<ProfilePage />} />
+                <Route path="stations" element={<StationList />} />
+                <Route path="reservations" element={<ReservationList />} />
+                <Route element={<ObjectIdRoute />}>
+                  <Route path="stations/:id" element={<StationDetail />} />
+                  <Route path="reservations/:id" element={<ReservationDetail />} />
+                </Route>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+                <Route element={<RoleBasedRoute roles={[ROLES.BACKOFFICE]} />}>
+                  <Route path="stations/new" element={<StationForm />} />
+                  <Route element={<ObjectIdRoute />}>
+                    <Route path="stations/:id/edit" element={<StationForm />} />
+                  </Route>
+                  <Route path="users" element={<UserManagement />} />
+                </Route>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+                <Route element={<RoleBasedRoute roles={[ROLES.GRID_OPERATOR]} />}>
+                  <Route path="qr-scanner" element={<QRScannerPage />} />
+                </Route>
+
+                <Route element={<RoleBasedRoute roles={[ROLES.GRID_OPERATOR, ROLES.BACKOFFICE]} />}>
+                  <Route
+                    path="reports"
+                    element={
+                      <Suspense fallback={<Spinner />}>
+                        <ReportsPage />
+                      </Suspense>
+                    }
+                  />
+                  <Route path="transactions" element={<TransactionList />} />
+                  <Route path="transactions/history" element={<TransactionHistory />} />
+                  <Route element={<ObjectIdRoute />}>
+                    <Route path="transactions/:id" element={<TransactionDetail />} />
+                  </Route>
+                </Route>
+              </Route>
+            </Route>
+
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </ErrorBoundary>
   )
 }
-
-export default App

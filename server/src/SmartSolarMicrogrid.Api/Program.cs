@@ -189,6 +189,17 @@ builder.Services.AddScoped<
 
 builder.Services.AddControllers();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("WebClient", policy =>
+        policy
+            .WithOrigins(
+                "http://localhost:5173",
+                "http://127.0.0.1:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod());
+});
+
 builder.Services.AddEndpointsApiExplorer();
 
 
@@ -317,6 +328,16 @@ if (app.Environment.IsDevelopment())
 }
 
 
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+app.UseCors("WebClient");
+
+app.UseAuthentication();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
 // Liveness Check
 app.MapGet("/health", () => Results.Ok(new { status = "OK" }));
 
@@ -325,25 +346,22 @@ app.MapGet("/api/health", async (IMongoDatabase database) =>
 {
     try
     {
-        try
-        {
-            await database.RunCommandAsync<BsonDocument>(
-                new BsonDocument("ping", 1));
+        await database.RunCommandAsync<BsonDocument>(
+            new BsonDocument("ping", 1));
 
-
-            return Results.Ok(new
-            {
-                status = "OK",
-                database = "Connected"
-            });
-        }
-        catch (Exception ex)
+        return Results.Ok(new
         {
-            return Results.Problem(
-                detail: ex.Message,
-                title: "MongoDB Connection Failed");
-        }
-    });
+            status = "OK",
+            database = "Connected"
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(
+            detail: ex.Message,
+            title: "MongoDB Connection Failed");
+    }
+});
 
 
 // ======================================================

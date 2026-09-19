@@ -9,6 +9,8 @@ public interface IReservationService
         string prosumerNIC,
         CreateReservationDto request);
 
+    Task<List<EnergyReservation>> GetAllAsync();
+
     Task<EnergyReservation?> GetByIdAsync(
         string id);
 

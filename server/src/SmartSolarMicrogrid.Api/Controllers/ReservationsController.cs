@@ -28,6 +28,18 @@ public class ReservationsController : ControllerBase
     // POST: /api/reservations
     // Only Prosumer users can create reservations.
 
+    // GET: /api/reservations
+    // Grid Operators and Backoffice users can list all reservations.
+    [HttpGet]
+    [Authorize(Roles = "GridOperator,Backoffice")]
+    public async Task<IActionResult> GetAll()
+    {
+        var reservations =
+            await _reservationService.GetAllAsync();
+
+        return Ok(reservations);
+    }
+
     [HttpPost]
     [Authorize(Roles = "Prosumer")]
     public async Task<IActionResult> Create(

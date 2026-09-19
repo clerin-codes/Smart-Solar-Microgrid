@@ -298,6 +298,12 @@ public class ReservationService : IReservationService
     // GET RESERVATION BY ID
     // =========================================================
 
+    public async Task<List<EnergyReservation>> GetAllAsync()
+    {
+        return await _reservationRepository
+            .GetAllAsync();
+    }
+
     public async Task<EnergyReservation?> GetByIdAsync(
         string id)
     {
