@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+
 using SmartSolarMicrogrid.Api.DTOs.Reservations;
 using SmartSolarMicrogrid.Api.Interfaces.Repositories;
 using SmartSolarMicrogrid.Api.Interfaces.Services;
@@ -315,6 +316,17 @@ public class ReservationService : IReservationService
     {
         return await _reservationRepository
             .GetByProsumerAsync(prosumerNIC);
+    }
+
+    // =========================================================
+    // GET ALL RESERVATIONS
+    // =========================================================
+
+    public async Task<List<EnergyReservation>>
+        GetAllReservationsAsync()
+    {
+        return await _reservationRepository
+            .GetAllAsync();
     }
 
     // =========================================================
