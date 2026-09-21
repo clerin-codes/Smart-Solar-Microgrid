@@ -15,6 +15,8 @@ public interface IReservationService
     Task<List<EnergyReservation>> GetMyReservationsAsync(
         string prosumerNIC);
 
+    Task<List<EnergyReservation>> GetAllReservationsAsync();
+
     Task<EnergyReservation> UpdateAsync(
         string prosumerNIC,
         string reservationId,
