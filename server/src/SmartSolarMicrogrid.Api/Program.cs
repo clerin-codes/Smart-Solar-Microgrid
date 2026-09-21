@@ -18,7 +18,6 @@ using SmartSolarMicrogrid.Api.SeedData;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
 // ======================================================
 // 1. MongoDB Configuration
 // ======================================================
@@ -33,12 +32,10 @@ if (mongoSettings == null)
         "MongoDbSettings configuration is missing.");
 }
 
-
 // Register MongoDB Client
 builder.Services.AddSingleton<IMongoClient>(_ =>
     new MongoClient(
         mongoSettings.ConnectionString));
-
 
 // Register MongoDB Database
 builder.Services.AddSingleton<IMongoDatabase>(
@@ -51,7 +48,6 @@ builder.Services.AddSingleton<IMongoDatabase>(
         return client.GetDatabase(
             mongoSettings.DatabaseName);
     });
-
 
 // ======================================================
 // 2. JWT Configuration
@@ -67,10 +63,8 @@ if (jwtSettings == null)
         "JwtSettings configuration is missing.");
 }
 
-
 // Register JwtSettings in Dependency Injection
 builder.Services.AddSingleton(jwtSettings);
-
 
 // ======================================================
 // 3. JWT Authentication
@@ -105,16 +99,29 @@ builder.Services
             };
     });
 
-
 // ======================================================
 // 4. Authorization
 // ======================================================
 
 builder.Services.AddAuthorization();
 
+// ======================================================
+// 5. CORS Configuration
+// ======================================================
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("WebApp", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 // ======================================================
-// 5. Repository Dependency Injection
+// 6. Repository Dependency Injection
 // ======================================================
 
 // User Repository
@@ -122,27 +129,23 @@ builder.Services.AddScoped<
     IUserRepository,
     UserRepository>();
 
-
 // Station Repository
 builder.Services.AddScoped<
     IStationRepository,
     StationRepository>();
-
 
 // Reservation Repository
 builder.Services.AddScoped<
     IReservationRepository,
     ReservationRepository>();
 
-
 // Slot Repository
 builder.Services.AddScoped<
     ISlotRepository,
     SlotRepository>();
 
-
 // ======================================================
-// 6. Service Dependency Injection
+// 7. Service Dependency Injection
 // ======================================================
 
 // Authentication Service
@@ -150,47 +153,40 @@ builder.Services.AddScoped<
     IAuthService,
     AuthService>();
 
-
 // User Service
 builder.Services.AddScoped<
     IUserService,
     UserService>();
-
 
 // Station Service
 builder.Services.AddScoped<
     IStationService,
     StationService>();
 
-
 // Slot Service
 builder.Services.AddScoped<
     ISlotService,
     SlotService>();
-
 
 // Reservation Service
 builder.Services.AddScoped<
     IReservationService,
     ReservationService>();
 
-
 // ======================================================
-// 7. Seed Data Service
+// 8. Seed Data Service
 // ======================================================
 
 builder.Services.AddScoped<
     SeedDataService>();
 
-
 // ======================================================
-// 8. Controllers + Swagger
+// 9. Controllers + Swagger
 // ======================================================
 
 builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
-
 
 // ======================================================
 // Swagger Configuration
@@ -220,7 +216,6 @@ builder.Services.AddSwaggerGen(options =>
                 "Enter your JWT token. Example: Bearer {your token}"
         });
 
-
     // --------------------------------------------------
     // Apply JWT Security Requirement
     // --------------------------------------------------
@@ -238,16 +233,14 @@ builder.Services.AddSwaggerGen(options =>
             });
 });
 
-
 // ======================================================
 // Build Application
 // ======================================================
 
 var app = builder.Build();
 
-
 // ======================================================
-// 9. MongoDB Startup Connection Test
+// 10. MongoDB Startup Connection Test
 // ======================================================
 
 try
@@ -256,10 +249,8 @@ try
         app.Services
             .GetRequiredService<IMongoDatabase>();
 
-
     await database.RunCommandAsync<BsonDocument>(
         new BsonDocument("ping", 1));
-
 
     Console.WriteLine(
         "========================================");
@@ -288,9 +279,8 @@ catch (Exception ex)
         "========================================");
 }
 
-
 // ======================================================
-// 10. Seed Database
+// 11. Seed Database
 // ======================================================
 
 using (var scope =
@@ -304,9 +294,8 @@ using (var scope =
     await seedDataService.SeedAsync();
 }
 
-
 // ======================================================
-// 11. HTTP Request Pipeline
+// 12. HTTP Request Pipeline
 // ======================================================
 
 if (app.Environment.IsDevelopment())
@@ -316,38 +305,39 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-
 // ======================================================
-// 12. Global Exception Handling Middleware
+// 13. Global Exception Handling Middleware
 // ======================================================
 
 app.UseMiddleware<
     ExceptionHandlingMiddleware>();
 
+// ======================================================
+// 14. CORS
+// ======================================================
+
+app.UseCors("WebApp");
 
 // ======================================================
-// 13. Authentication Middleware
+// 15. Authentication Middleware
 // ======================================================
 
 app.UseAuthentication();
 
-
 // ======================================================
-// 14. Authorization Middleware
+// 16. Authorization Middleware
 // ======================================================
 
 app.UseAuthorization();
 
-
 // ======================================================
-// 15. Controller Mapping
+// 17. Controller Mapping
 // ======================================================
 
 app.MapControllers();
 
-
 // ======================================================
-// 16. MongoDB Health Check
+// 18. MongoDB Health Check
 // ======================================================
 
 app.MapGet(
@@ -358,7 +348,6 @@ app.MapGet(
         {
             await database.RunCommandAsync<BsonDocument>(
                 new BsonDocument("ping", 1));
-
 
             return Results.Ok(new
             {
@@ -374,9 +363,8 @@ app.MapGet(
         }
     });
 
-
 // ======================================================
-// 17. JWT Authentication Test Endpoint
+// 19. JWT Authentication Test Endpoint
 // ======================================================
 
 app.MapGet(
@@ -402,7 +390,6 @@ app.MapGet(
         });
     })
     .RequireAuthorization();
-
 
 // ======================================================
 // Run Application
