@@ -6,7 +6,7 @@ using MongoDB.Driver;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi;
+using Microsoft.OpenApi.Models;
 
 using SmartSolarMicrogrid.Api.Configuration;
 using SmartSolarMicrogrid.Api.Interfaces.Repositories;
@@ -220,17 +220,20 @@ builder.Services.AddSwaggerGen(options =>
     // Apply JWT Security Requirement
     // --------------------------------------------------
 
-    options.AddSecurityRequirement(
-        document =>
-            new OpenApiSecurityRequirement
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
             {
-                [
-                    new OpenApiSecuritySchemeReference(
-                        "Bearer",
-                        document)
-                ]
-                = new List<string>()
-            });
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new List<string>()
+        }
+    });
 });
 
 // ======================================================
@@ -354,6 +357,13 @@ app.MapGet(
                 status = "OK",
                 database = "Connected"
             });
+        }
+        catch (Exception ex)
+        {
+            return Results.Problem(
+                detail: ex.Message,
+                title: "MongoDB Connection Failed");
+        }
         }
         catch (Exception ex)
         {

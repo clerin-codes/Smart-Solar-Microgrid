@@ -28,6 +28,13 @@ public class StationRepository : IStationRepository
             .FirstOrDefaultAsync();
     }
 
+    public async Task<SolarStationInfo?> GetByCodeAsync(string stationCode)
+    {
+        return await _collection
+            .Find(x => x.StationCode == stationCode)
+            .FirstOrDefaultAsync();
+    }
+
     public async Task CreateAsync(SolarStationInfo station)
     {
         await _collection.InsertOneAsync(station);

@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using SmartSolarMicrogrid.Api.DTOs.Slots;
 using SmartSolarMicrogrid.Api.Interfaces.Repositories;
 using SmartSolarMicrogrid.Api.Interfaces.Services;
@@ -213,5 +216,26 @@ public class SlotService : ISlotService
         await _slotRepository.UpdateAsync(slot);
 
         return slot;
+    }
+
+    // New method to retrieve available slots with optional filters
+    public async Task<List<EnergyBookingSlot>> GetAvailableSlotsAsync(string? stationId = null, DateTime? date = null)
+    {
+        var allSlots = await _slotRepository.GetAllAsync();
+        var query = allSlots.AsQueryable()
+            .Where(s => s.Status == SlotStatus.Available && s.AvailableCapacityKw > 0);
+
+        if (!string.IsNullOrEmpty(stationId))
+        {
+            query = query.Where(s => s.StationId == stationId);
+        }
+
+        if (date.HasValue)
+        {
+            var targetDate = date.Value.Date;
+            query = query.Where(s => s.SlotDate.Date == targetDate);
+        }
+
+        return query.ToList();
     }
 }
