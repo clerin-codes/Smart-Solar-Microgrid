@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace SmartSolarMicrogrid.Api.DTOs.Stations;
 
 public class UpdateStationDto
@@ -11,4 +13,6 @@ public class UpdateStationDto
     public double CapacityKw { get; set; }
 
     public int BatteryStorageSlots { get; set; }
+
+    public List<StationScheduleDto> Schedules { get; set; } = new();
 }
