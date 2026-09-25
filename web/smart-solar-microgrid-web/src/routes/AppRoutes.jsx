@@ -10,6 +10,9 @@ import MainLayout from '../layouts/MainLayout'
 import Reservations from '../pages/operator/Reservations'
 import ReservationDetails from '../pages/operator/ReservationDetails'
 
+import Stations from '../pages/backoffice/Stations'
+import Slots from '../pages/backoffice/Slots'
+
 function Overview() {
   return (
     <div className="min-h-[calc(100vh-7rem)] flex items-center justify-center">
@@ -424,6 +427,18 @@ function AppRoutes() {
           <Route
             path="/backoffice/dashboard"
             element={<BackofficeDashboard />}
+          />
+
+          {/* Backoffice Stations */}
+          <Route
+            path="/backoffice/stations"
+            element={<Stations />}
+          />
+
+          {/* Backoffice Slots */}
+          <Route
+            path="/backoffice/slots"
+            element={<Slots />}
           />
 
           {/* Grid Operator Dashboard */}
