@@ -364,13 +364,6 @@ app.MapGet(
                 detail: ex.Message,
                 title: "MongoDB Connection Failed");
         }
-        }
-        catch (Exception ex)
-        {
-            return Results.Problem(
-                detail: ex.Message,
-                title: "MongoDB Connection Failed");
-        }
     });
 
 // ======================================================
