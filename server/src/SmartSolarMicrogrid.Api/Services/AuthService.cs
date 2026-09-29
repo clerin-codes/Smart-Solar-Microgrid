@@ -1,11 +1,22 @@
+/*
+ * Smart Solar Microgrid Trading System
+ * Member 1 - Authentication and Accounts
+ * File: AuthService.cs
+ * Purpose: Validates account credentials and generates secure,
+ *          role-based JWT access tokens.
+ */
+
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+
 using Microsoft.IdentityModel.Tokens;
+
 using SmartSolarMicrogrid.Api.Configuration;
 using SmartSolarMicrogrid.Api.DTOs.Auth;
 using SmartSolarMicrogrid.Api.Interfaces.Repositories;
 using SmartSolarMicrogrid.Api.Interfaces.Services;
+using SmartSolarMicrogrid.Api.Models;
 
 namespace SmartSolarMicrogrid.Api.Services;
 
@@ -18,26 +29,33 @@ public class AuthService : IAuthService
         IUserRepository userRepository,
         JwtSettings jwtSettings)
     {
-        _userRepository = userRepository;
-        _jwtSettings = jwtSettings;
+        // Store authentication dependencies.
+        _userRepository =
+            userRepository;
+
+        _jwtSettings =
+            jwtSettings;
     }
 
     public async Task<LoginResponseDto> LoginAsync(
         LoginRequestDto request)
     {
-        var user =
-            await _userRepository.GetByNICAsync(request.NIC);
+        // Normalize the NIC before querying MongoDB.
+        var nic =
+            request.NIC
+                .Trim()
+                .ToUpperInvariant();
 
+        var user =
+            await _userRepository
+                .GetByNICAsync(nic);
+
+        // Use one generic credential error to avoid disclosing
+        // whether a supplied NIC exists.
         if (user == null)
         {
             throw new UnauthorizedAccessException(
                 "Invalid NIC or password.");
-        }
-
-        if (!user.IsActive)
-        {
-            throw new UnauthorizedAccessException(
-                "This account is inactive.");
         }
 
         var passwordValid =
@@ -51,62 +69,132 @@ public class AuthService : IAuthService
                 "Invalid NIC or password.");
         }
 
-        var token = GenerateToken(
-            user.NIC,
-            user.FullName,
-            user.Role.ToString());
+        // Only fully active accounts may receive new JWTs.
+        if (!user.IsActive ||
+            user.Status != AccountStatus.Active)
+        {
+            var message =
+                user.Status switch
+                {
+                    AccountStatus.PendingActivation =>
+                        "Your account is awaiting Backoffice activation.",
+
+                    AccountStatus.DeactivationRequested =>
+                        "Your account has a pending deactivation request.",
+
+                    AccountStatus.Deactivated =>
+                        "Your account is deactivated.",
+
+                    _ =>
+                        "This account is inactive."
+                };
+
+            throw new UnauthorizedAccessException(
+                message);
+        }
+
+        var expiresAtUtc =
+            DateTime.UtcNow.AddMinutes(
+                _jwtSettings.ExpiryMinutes);
+
+        var token =
+            GenerateToken(
+                user,
+                expiresAtUtc);
 
         return new LoginResponseDto
         {
-            Token = token,
-            NIC = user.NIC,
-            FullName = user.FullName,
-            Role = user.Role.ToString()
+            Token =
+                token,
+
+            TokenType =
+                "Bearer",
+
+            ExpiresAtUtc =
+                expiresAtUtc,
+
+            NIC =
+                user.NIC,
+
+            FullName =
+                user.FullName,
+
+            Role =
+                user.Role,
+
+            AccountStatus =
+                user.Status
         };
     }
 
     private string GenerateToken(
-        string nic,
-        string fullName,
-        string role)
+        UserDetails user,
+        DateTime expiresAtUtc)
     {
-        var claims = new List<Claim>
-        {
-            new Claim(
-                ClaimTypes.NameIdentifier,
-                nic),
+        // Create standard identity, role and token-identifier claims.
+        var claims =
+            new List<Claim>
+            {
+                new(
+                    JwtRegisteredClaimNames.Sub,
+                    user.NIC),
 
-            new Claim(
-                ClaimTypes.Name,
-                fullName),
+                new(
+                    ClaimTypes.NameIdentifier,
+                    user.NIC),
 
-            new Claim(
-                ClaimTypes.Role,
-                role)
-        };
+                new(
+                    ClaimTypes.Name,
+                    user.FullName),
 
-        var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(
-                _jwtSettings.SecretKey));
+                new(
+                    ClaimTypes.Role,
+                    user.Role.ToString()),
+
+                new(
+                    JwtRegisteredClaimNames.Jti,
+                    Guid.NewGuid().ToString())
+            };
+
+        var signingKey =
+            new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(
+                    _jwtSettings.SecretKey))
+            {
+                KeyId =
+                    JwtSettings.SigningKeyId
+            };
 
         var credentials =
             new SigningCredentials(
-                key,
+                signingKey,
                 SecurityAlgorithms.HmacSha256);
 
-        var expiry =
-            DateTime.UtcNow.AddMinutes(
-                _jwtSettings.ExpiryMinutes);
+        var now =
+            DateTime.UtcNow;
 
-        var tokenDescriptor =
+        // Generate the signed access token.
+        var token =
             new JwtSecurityToken(
-                issuer: _jwtSettings.Issuer,
-                audience: _jwtSettings.Audience,
-                claims: claims,
-                expires: expiry,
-                signingCredentials: credentials);
+                issuer:
+                    _jwtSettings.Issuer,
+
+                audience:
+                    _jwtSettings.Audience,
+
+                claims:
+                    claims,
+
+                notBefore:
+                    now,
+
+                expires:
+                    expiresAtUtc,
+
+                signingCredentials:
+                    credentials);
 
         return new JwtSecurityTokenHandler()
-            .WriteToken(tokenDescriptor);
+            .WriteToken(token);
     }
 }

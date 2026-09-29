@@ -1,18 +1,17 @@
 /*
  * Smart Solar Microgrid Trading System
  * Member 1 - Authentication and Accounts
- * File: CreateUserDto.cs
- * Purpose: Validates accounts created by Backoffice administrators.
+ * File: RegisterProsumerDto.cs
+ * Purpose: Validates Solar Prosumer self-registration requests.
  */
 
 using System.ComponentModel.DataAnnotations;
 
-using SmartSolarMicrogrid.Api.Models;
 using SmartSolarMicrogrid.Api.Validation;
 
-namespace SmartSolarMicrogrid.Api.DTOs.Users;
+namespace SmartSolarMicrogrid.Api.DTOs.Auth;
 
-public class CreateUserDto
+public class RegisterProsumerDto
 {
     [Required(
         ErrorMessage = "NIC is required.")]
@@ -40,7 +39,8 @@ public class CreateUserDto
     [Required(
         ErrorMessage = "Email address is required.")]
     [EmailAddress(
-        ErrorMessage = "Enter a valid email address.")]
+        ErrorMessage =
+            "Enter a valid email address.")]
     [StringLength(
         254,
         ErrorMessage =
@@ -49,7 +49,8 @@ public class CreateUserDto
         string.Empty;
 
     [Required(
-        ErrorMessage = "Mobile phone number is required.")]
+        ErrorMessage =
+            "Mobile phone number is required.")]
     [RegularExpression(
         @"^(?:\+94|0)7\d{8}$",
         ErrorMessage =
@@ -62,11 +63,4 @@ public class CreateUserDto
     [StrongPassword]
     public string Password { get; set; } =
         string.Empty;
-
-    [Required(
-        ErrorMessage = "User role is required.")]
-    [EnumDataType(
-        typeof(UserRole),
-        ErrorMessage = "Select a valid user role.")]
-    public UserRole? Role { get; set; }
 }
