@@ -474,6 +474,7 @@ builder.Services.AddSwaggerGen(options =>
                 "Do not manually type the word Bearer."
         });
 
+    // Apply JWT security requirement to Swagger operations.
     options.AddSecurityRequirement(
         new OpenApiSecurityRequirement
         {
