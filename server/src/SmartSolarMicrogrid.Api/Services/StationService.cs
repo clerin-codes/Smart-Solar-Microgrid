@@ -2,6 +2,7 @@ using SmartSolarMicrogrid.Api.DTOs.Stations;
 using SmartSolarMicrogrid.Api.Interfaces.Repositories;
 using SmartSolarMicrogrid.Api.Interfaces.Services;
 using SmartSolarMicrogrid.Api.Models;
+using System.Linq;
 
 namespace SmartSolarMicrogrid.Api.Services;
 
@@ -32,6 +33,13 @@ public class StationService : IStationService
     public async Task<SolarStationInfo> CreateAsync(
         CreateStationDto request)
     {
+        // Ensure unique station code
+        var existing = await _stationRepository.GetByCodeAsync(request.StationCode);
+        if (existing != null)
+        {
+            throw new InvalidOperationException("Station code must be unique.");
+        }
+
         // Capacity must be greater than zero
         if (request.CapacityKw <= 0)
         {
@@ -46,26 +54,37 @@ public class StationService : IStationService
                 "Battery storage slots must be greater than zero.");
         }
 
+        // Validate schedules if provided
+        if (request.Schedules != null)
+        {
+            foreach (var sch in request.Schedules)
+            {
+                if (sch.OpeningTime >= sch.ClosingTime)
+                {
+                    throw new InvalidOperationException("Schedule opening time must be before closing time.");
+                }
+            }
+        }
+
         var station = new SolarStationInfo
         {
             StationCode = request.StationCode,
             StationName = request.StationName,
-
             Latitude = request.Latitude,
             Longitude = request.Longitude,
-
             CapacityKw = request.CapacityKw,
-
-            BatteryStorageSlots =
-                request.BatteryStorageSlots,
-
-            AvailableSlots =
-                request.BatteryStorageSlots,
-
+            BatteryStorageSlots = request.BatteryStorageSlots,
+            AvailableSlots = request.BatteryStorageSlots,
             IsActive = true,
-
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            Schedules = request.Schedules?.Select(s => new StationSchedule
+            {
+                Day = s.Day,
+                OpeningTime = s.OpeningTime,
+                ClosingTime = s.ClosingTime,
+                IsAvailable = s.IsAvailable
+            }).ToList() ?? new List<StationSchedule>()
         };
 
         await _stationRepository.CreateAsync(station);

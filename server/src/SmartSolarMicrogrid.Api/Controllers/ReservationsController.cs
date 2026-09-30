@@ -48,7 +48,25 @@ public class ReservationsController : ControllerBase
 
 
     // ======================================================
-    // 2. Get Reservation By ID
+    // 2. Get All Reservations
+    // ======================================================
+    // GET: /api/reservations
+    // Only Grid Operators can access all reservations.
+
+    [HttpGet]
+    [Authorize(Roles = "GridOperator")]
+    public async Task<IActionResult> GetAllReservations()
+    {
+        var reservations =
+            await _reservationService
+                .GetAllReservationsAsync();
+
+        return Ok(reservations);
+    }
+
+
+    // ======================================================
+    // 3. Get Reservation By ID
     // ======================================================
     // GET: /api/reservations/{id}
     // Authenticated users can access a reservation.
@@ -76,7 +94,7 @@ public class ReservationsController : ControllerBase
 
 
     // ======================================================
-    // 3. Get My Reservations
+    // 4. Get My Reservations
     // ======================================================
     // GET: /api/reservations/my
     // Only Prosumer users can access their reservations.
@@ -96,7 +114,7 @@ public class ReservationsController : ControllerBase
 
 
     // ======================================================
-    // 4. Update Reservation
+    // 5. Update Reservation
     // ======================================================
     // PUT: /api/reservations/{id}
     // Only the Prosumer who owns the reservation
@@ -121,7 +139,7 @@ public class ReservationsController : ControllerBase
 
 
     // ======================================================
-    // 5. Cancel Reservation
+    // 6. Cancel Reservation
     // ======================================================
     // DELETE: /api/reservations/{id}
     // Only the Prosumer who owns the reservation
@@ -147,7 +165,7 @@ public class ReservationsController : ControllerBase
 
 
     // ======================================================
-    // 6. Approve Reservation
+    // 7. Approve Reservation
     // ======================================================
     // POST: /api/reservations/{id}/approve
     // Only Grid Operators can approve reservations.
@@ -169,7 +187,7 @@ public class ReservationsController : ControllerBase
 
 
     // ======================================================
-    // 7. Verify QR Code
+    // 8. Verify QR Code
     // ======================================================
     // POST: /api/reservations/verify-qr
     // Only Grid Operators can verify QR codes.
@@ -191,7 +209,7 @@ public class ReservationsController : ControllerBase
 
 
     // ======================================================
-    // 8. Complete Reservation / Transaction
+    // 9. Complete Reservation / Transaction
     // ======================================================
     // POST: /api/reservations/{id}/complete
     // Only Grid Operators can complete transactions.
