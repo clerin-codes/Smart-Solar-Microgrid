@@ -6,6 +6,8 @@ public interface IUserRepository
 {
     Task<UserDetails?> GetByNICAsync(string nic);
 
+    Task<UserDetails?> GetByEmailAsync(string email);
+
     Task<List<UserDetails>> GetAllAsync();
 
     Task CreateAsync(UserDetails user);

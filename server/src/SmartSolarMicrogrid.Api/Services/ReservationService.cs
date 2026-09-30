@@ -633,6 +633,82 @@ public class ReservationService : IReservationService
     }
 
     // =========================================================
+// REJECT RESERVATION
+// =========================================================
+
+public async Task<EnergyReservation> RejectAsync(
+    string operatorNIC,
+    string reservationId)
+{
+    // =====================================================
+    // CHECK OPERATOR
+    // =====================================================
+
+    var operatorUser =
+        await _userRepository
+            .GetByNICAsync(operatorNIC);
+
+    if (operatorUser == null)
+    {
+        throw new KeyNotFoundException(
+            "Operator not found.");
+    }
+
+    if (!operatorUser.IsActive)
+    {
+        throw new UnauthorizedAccessException(
+            "Operator account is inactive.");
+    }
+
+    if (operatorUser.Role !=
+        UserRole.GridOperator)
+    {
+        throw new UnauthorizedAccessException(
+            "Only Grid Operators can reject reservations.");
+    }
+
+    // =====================================================
+    // FIND RESERVATION
+    // =====================================================
+
+    var reservation =
+        await _reservationRepository
+            .GetByIdAsync(reservationId);
+
+    if (reservation == null)
+    {
+        throw new KeyNotFoundException(
+            "Reservation not found.");
+    }
+
+    // =====================================================
+    // ONLY PENDING RESERVATIONS CAN BE REJECTED
+    // =====================================================
+
+    if (reservation.Status !=
+        ReservationStatus.Pending)
+    {
+        throw new InvalidOperationException(
+            "Only pending reservations can be rejected.");
+    }
+
+    // =====================================================
+    // REJECT
+    // =====================================================
+
+    reservation.Status =
+        ReservationStatus.Rejected;
+
+    reservation.UpdatedAt =
+        DateTime.UtcNow;
+
+    await _reservationRepository
+        .UpdateAsync(reservation);
+
+    return reservation;
+}
+
+    // =========================================================
     // APPROVE RESERVATION
     // =========================================================
 

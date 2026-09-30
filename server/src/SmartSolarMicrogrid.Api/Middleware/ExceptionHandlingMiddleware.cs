@@ -1,4 +1,5 @@
 using System.Text.Json;
+using SmartSolarMicrogrid.Api.Exceptions;
 
 namespace SmartSolarMicrogrid.Api.Middleware;
 
@@ -43,6 +44,9 @@ public class ExceptionHandlingMiddleware
             {
                 KeyNotFoundException =>
                     StatusCodes.Status404NotFound,
+
+                ConflictException =>
+                    StatusCodes.Status409Conflict,
 
                 UnauthorizedAccessException =>
                     StatusCodes.Status401Unauthorized,
