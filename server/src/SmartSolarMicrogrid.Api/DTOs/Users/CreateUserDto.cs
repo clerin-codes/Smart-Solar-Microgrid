@@ -6,6 +6,7 @@
  */
 
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 using SmartSolarMicrogrid.Api.Models;
 using SmartSolarMicrogrid.Api.Validation;
@@ -68,5 +69,6 @@ public class CreateUserDto
     [EnumDataType(
         typeof(UserRole),
         ErrorMessage = "Select a valid user role.")]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public UserRole? Role { get; set; }
 }

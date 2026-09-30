@@ -17,8 +17,8 @@ using MongoDB.Driver;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Any;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
+using System.Text.Json.Nodes;
 
 using SmartSolarMicrogrid.Api.Configuration;
 using SmartSolarMicrogrid.Api.Interfaces.Repositories;
@@ -323,16 +323,10 @@ builder.Services.AddScoped<
 // ======================================================
 
 builder.Services
-    .AddControllers()
-    .AddJsonOptions(options =>
-    {
-        // Serialize enums using readable names.
-        options
-            .JsonSerializerOptions
-            .Converters
-            .Add(
-                new JsonStringEnumConverter());
-    });
+    // Enums stay numeric by default (reservation, slot and transaction status are
+    // part of the Android/Postman contract). Auth DTOs opt in to string enums
+    // individually with [JsonConverter(typeof(JsonStringEnumConverter))].
+    .AddControllers();
 
 // ======================================================
 // 10. Validation Error Response Configuration
@@ -413,7 +407,7 @@ builder.Services.AddSwaggerGen(options =>
             new OpenApiSchema
             {
                 Type =
-                    "string",
+                    JsonSchemaType.String,
 
                 Description =
                     "User role",
@@ -422,9 +416,8 @@ builder.Services.AddSwaggerGen(options =>
                     Enum.GetNames<UserRole>()
                         .Select(
                             name =>
-                                (IOpenApiAny)
-                                new OpenApiString(
-                                    name))
+                                (JsonNode)
+                                JsonValue.Create(name)!)
                         .ToList()
             });
 
@@ -434,7 +427,7 @@ builder.Services.AddSwaggerGen(options =>
             new OpenApiSchema
             {
                 Type =
-                    "string",
+                    JsonSchemaType.String,
 
                 Description =
                     "Account lifecycle status",
@@ -443,9 +436,8 @@ builder.Services.AddSwaggerGen(options =>
                     Enum.GetNames<AccountStatus>()
                         .Select(
                             name =>
-                                (IOpenApiAny)
-                                new OpenApiString(
-                                    name))
+                                (JsonNode)
+                                JsonValue.Create(name)!)
                         .ToList()
             });
 
@@ -476,25 +468,12 @@ builder.Services.AddSwaggerGen(options =>
 
     // Apply JWT security requirement to Swagger operations.
     options.AddSecurityRequirement(
-        new OpenApiSecurityRequirement
-        {
+        document =>
+            new OpenApiSecurityRequirement
             {
-                new OpenApiSecurityScheme
-                {
-                    Reference =
-                        new OpenApiReference
-                        {
-                            Type =
-                                ReferenceType.SecurityScheme,
-
-                            Id =
-                                "Bearer"
-                        }
-                },
-
-                Array.Empty<string>()
-            }
-        });
+                [new OpenApiSecuritySchemeReference("Bearer", document)] =
+                    []
+            });
 });
 
 // ======================================================

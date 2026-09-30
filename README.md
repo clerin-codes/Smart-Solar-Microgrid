@@ -22,6 +22,7 @@ The backend is built with C# ASP.NET Core Web API.
 ```bash
 cd server/src/SmartSolarMicrogrid.Api
 dotnet restore
+dotnet build
 dotnet run
 ```
 

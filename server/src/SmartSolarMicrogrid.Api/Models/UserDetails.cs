@@ -6,6 +6,7 @@
  *          used for authentication and account management.
  */
 
+using System.Text.Json.Serialization;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
@@ -61,6 +62,14 @@ public class UserDetails
     // to authenticate and use protected API operations.
     public bool IsActive { get; set; } =
         true;
+
+    /// <summary>
+    /// Profile picture as base64 (no "data:" prefix), JPEG, PNG or WebP. Kept out of the raw user JSON
+    /// (GET /api/users) so those lists stay small; the profile endpoints return it.
+    /// </summary>
+    [BsonIgnoreIfNull]
+    [JsonIgnore]
+    public string? ProfileImage { get; set; }
 
     // Store lifecycle status as a readable MongoDB string:
     // "Active",

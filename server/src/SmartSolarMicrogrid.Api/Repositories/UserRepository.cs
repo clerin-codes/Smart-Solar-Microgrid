@@ -72,6 +72,16 @@ public class UserRepository : IUserRepository
             .FirstOrDefaultAsync();
     }
 
+    public async Task<UserDetails?> GetByEmailAsync(string email)
+    {
+        // Emails are compared case-insensitively.
+        var normalised = email.ToLower();
+
+        return await _collection
+            .Find(x => x.Email.ToLower() == normalised)
+            .FirstOrDefaultAsync();
+    }
+
     public async Task<List<UserDetails>> GetAllAsync()
     {
         // Retrieve all user accounts ordered newest first.

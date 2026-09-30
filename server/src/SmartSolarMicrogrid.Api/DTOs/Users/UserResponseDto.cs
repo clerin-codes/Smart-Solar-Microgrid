@@ -5,6 +5,7 @@
  * Purpose: Safely returns user information without exposing PasswordHash.
  */
 
+using System.Text.Json.Serialization;
 using SmartSolarMicrogrid.Api.Models;
 
 namespace SmartSolarMicrogrid.Api.DTOs.Users;
@@ -23,10 +24,12 @@ public class UserResponseDto
     public string PhoneNumber { get; set; } =
         string.Empty;
 
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public UserRole Role { get; set; }
 
     public bool IsActive { get; set; }
 
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public AccountStatus Status { get; set; }
 
     public DateTime? DeactivationRequestedAt { get; set; }

@@ -5,6 +5,7 @@
  * Purpose: Returns authenticated user and JWT information.
  */
 
+using System.Text.Json.Serialization;
 using SmartSolarMicrogrid.Api.Models;
 
 namespace SmartSolarMicrogrid.Api.DTOs.Auth;
@@ -25,7 +26,9 @@ public class LoginResponseDto
     public string FullName { get; set; } =
         string.Empty;
 
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public UserRole Role { get; set; }
 
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public AccountStatus AccountStatus { get; set; }
 }

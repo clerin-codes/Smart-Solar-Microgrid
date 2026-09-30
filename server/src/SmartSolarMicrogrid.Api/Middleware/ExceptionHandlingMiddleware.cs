@@ -8,6 +8,7 @@
 
 using System.Net;
 using System.Text.Json;
+using SmartSolarMicrogrid.Api.Exceptions;
 
 namespace SmartSolarMicrogrid.Api.Middleware;
 
@@ -45,6 +46,13 @@ public class ExceptionHandlingMiddleware
             await WriteErrorResponseAsync(
                 context,
                 HttpStatusCode.NotFound,
+                ex.Message);
+        }
+        catch (ConflictException ex)
+        {
+            await WriteErrorResponseAsync(
+                context,
+                HttpStatusCode.Conflict,
                 ex.Message);
         }
         catch (InvalidOperationException ex)

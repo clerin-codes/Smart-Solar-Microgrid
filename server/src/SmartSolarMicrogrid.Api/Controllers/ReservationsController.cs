@@ -185,6 +185,27 @@ public class ReservationsController : ControllerBase
         return Ok(reservation);
     }
 
+    // ======================================================
+    // 8. Reject Reservation
+    // ======================================================
+    // POST: /api/reservations/{id}/reject
+    // Only Grid Operators can reject pending reservations.
+
+    [HttpPost("{id}/reject")]
+    [Authorize(Roles = "GridOperator")]
+    public async Task<IActionResult> Reject(
+        string id)
+    {
+        var operatorNIC = GetCurrentUserNIC();
+
+        var reservation =
+            await _reservationService.RejectAsync(
+                operatorNIC,
+                id);
+
+        return Ok(reservation);
+    }
+
 
     // ======================================================
     // 8. Verify QR Code
