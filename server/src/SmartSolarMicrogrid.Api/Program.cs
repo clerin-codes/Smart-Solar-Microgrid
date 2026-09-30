@@ -320,12 +320,10 @@ using (var scope =
 // 11. HTTP Request Pipeline
 // ======================================================
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
+app.UseSwagger();
 
-    app.UseSwaggerUI();
-}
+app.UseSwaggerUI();
+
 
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
