@@ -1,0 +1,3144 @@
+{
+  "info": {
+    "name": "Smart Solar Microgrid API",
+    "description": "REST API for the Smart Solar Microgrid backend (ASP.NET Core + MongoDB, JWT).\n\nSet up: import the environment, fill in the password variables locally (they are blank on purpose), then run 01 Authentication first. See TESTING_GUIDE.md for the run order.\n\nQR verification and transaction completion are part of ReservationsController (POST /reservations/verify-qr and POST /reservations/{id}/complete). There are no /qr or /transactions routes.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 Authentication",
+      "item": [
+        {
+          "name": "Login - Prosumer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nic\": \"{{prosumerNic}}\",\n  \"password\": \"{{prosumerPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Public. Returns { token, nic, fullName, role }. The token is saved to `prosumerToken`. Fill `prosumerPassword` in your local environment first (it is intentionally empty in the committed file)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('Token returned', () => pm.expect(j.token).to.be.a('string').and.not.empty);",
+                  "pm.environment.set('prosumerToken', j.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - Grid Operator",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nic\": \"{{operatorNic}}\",\n  \"password\": \"{{operatorPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Public. Returns { token, nic, fullName, role }. The token is saved to `operatorToken`. Fill `operatorPassword` in your local environment first (it is intentionally empty in the committed file)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('Token returned', () => pm.expect(j.token).to.be.a('string').and.not.empty);",
+                  "pm.environment.set('operatorToken', j.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - Backoffice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nic\": \"{{backofficeNic}}\",\n  \"password\": \"{{backofficePassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Public. Returns { token, nic, fullName, role }. The token is saved to `backofficeToken`. Fill `backofficePassword` in your local environment first (it is intentionally empty in the committed file)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('Token returned', () => pm.expect(j.token).to.be.a('string').and.not.empty);",
+                  "pm.environment.set('backofficeToken', j.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register new prosumer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nic\": \"{{regNic}}\",\n  \"fullName\": \"Postman Test User\",\n  \"email\": \"{{regEmail}}\",\n  \"phoneNumber\": \"{{regPhone}}\",\n  \"password\": \"{{regPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Public. Creates a Prosumer account (role is always Prosumer) with a random NIC, email, phone and password generated by the pre-request script, so nothing sensitive is stored. Password must be at least 8 characters."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = Math.floor(100000000000 + Math.random() * 899999999999);",
+                  "pm.variables.set('regNic', String(r));",
+                  "pm.variables.set('regEmail', 'postman.' + r + '@example.test');",
+                  "pm.variables.set('regPhone', '07' + String(r).substring(0, 8));",
+                  "pm.variables.set('regPassword', 'Pm-' + Math.random().toString(36).substring(2, 12));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Role is Prosumer', () => pm.expect(pm.response.json().role).to.eql('Prosumer'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get my profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "profile"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{prosumerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Any signed-in user. Also saves the profile fields so the update request can resend them unchanged."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const p = pm.response.json();",
+                  "pm.environment.set('profileFullName', p.fullName);",
+                  "pm.environment.set('profileEmail', p.email);",
+                  "pm.environment.set('profilePhone', p.phoneNumber);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update my profile (unchanged values)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "profile"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{prosumerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"{{profileFullName}}\",\n  \"email\": \"{{profileEmail}}\",\n  \"phoneNumber\": \"{{profilePhone}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Any signed-in user, own profile only. Resends the values captured by \"Get my profile\", so it changes nothing. Edit the body to test a real change. Email must stay unique (409 if taken)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 Users",
+      "item": [
+        {
+          "name": "Get all users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{backofficeToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Backoffice only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns an array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get user by NIC",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{prosumerNic}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{prosumerNic}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{backofficeToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Backoffice only. 404 if the NIC does not exist."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{backofficeToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nic\": \"{{newUserNic}}\",\n  \"fullName\": \"Postman Created User\",\n  \"email\": \"{{newUserEmail}}\",\n  \"phoneNumber\": \"{{newUserPhone}}\",\n  \"password\": \"{{newUserPassword}}\",\n  \"role\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Backoffice only. `role` is the UserRole number: 0 Backoffice, 1 GridOperator, 2 Prosumer. NIC and password are generated by the pre-request script."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = Math.floor(100000000000 + Math.random() * 899999999999);",
+                  "pm.environment.set('newUserNic', String(r));",
+                  "pm.environment.set('newUserPassword', 'Pm-' + Math.random().toString(36).substring(2, 12));",
+                  "pm.variables.set('newUserEmail', 'postman.user.' + r + '@example.test');",
+                  "pm.variables.set('newUserPhone', '07' + String(r).substring(0, 8));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update user",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{newUserNic}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{newUserNic}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{backofficeToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Postman Updated User\",\n  \"email\": \"{{newUserEmail}}\",\n  \"phoneNumber\": \"{{newUserPhone}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Backoffice only. Updates the user created above."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deactivate user",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{newUserNic}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{newUserNic}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{backofficeToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Backoffice only. Soft delete (IsActive = false)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reactivate user",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{newUserNic}}/reactivate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{newUserNic}}",
+                "reactivate"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{backofficeToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Backoffice only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 Stations",
+      "item": [
+        {
+          "name": "Get all stations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/stations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stations"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{prosumerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Any signed-in user. Saves the first active station to `stationId`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const list = pm.response.json();",
+                  "pm.test('Returns stations', () => pm.expect(list).to.be.an('array').and.not.empty);",
+                  "const s = list.find(x => x.isActive) || list[0];",
+                  "if (s) pm.environment.set('stationId', s.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get station by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/stations/{{stationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stations",
+                "{{stationId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{prosumerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Any signed-in user."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create station",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/stations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stations"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{backofficeToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stationCode\": \"{{stationCode}}\",\n  \"stationName\": \"Postman Test Station\",\n  \"latitude\": 7.0,\n  \"longitude\": 80.0,\n  \"capacityKw\": 50,\n  \"batteryStorageSlots\": 4\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Backoffice only. Capacity and battery slots must be greater than zero. Saves the new station to `createdStationId` (separate from `stationId`)."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('stationCode', 'PM-' + Date.now().toString(36).toUpperCase());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('createdStationId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update station",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/stations/{{createdStationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stations",
+                "{{createdStationId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{backofficeToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stationName\": \"Postman Test Station (updated)\",\n  \"latitude\": 7.0,\n  \"longitude\": 80.0,\n  \"capacityKw\": 60,\n  \"batteryStorageSlots\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Backoffice only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deactivate station",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/stations/{{createdStationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stations",
+                "{{createdStationId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{backofficeToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Backoffice only. Soft delete. Refused with 400 while the station has Pending or Approved reservations, which does not apply to the station created above."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 Energy Slots",
+      "item": [
+        {
+          "name": "Get all slots",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/slots",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "slots"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{prosumerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Any signed-in user. Saves the first Available slot dated within the next 7 days to `slotId`, `slotDate` and `stationId`. If none is found, run \"Create slot\" below."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const list = pm.response.json();",
+                  "const today = new Date().toISOString().substring(0, 10);",
+                  "const max = new Date(Date.now() + 7 * 864e5).toISOString().substring(0, 10);",
+                  "const s = list.find(x => x.status === 0 && x.slotDate.substring(0, 10) >= today && x.slotDate.substring(0, 10) <= max);",
+                  "pm.test('Found a bookable slot in the next 7 days', () => pm.expect(s, 'none found - use \"Create slot\"').to.exist);",
+                  "if (s) { pm.environment.set('slotId', s.id); pm.environment.set('slotDate', s.slotDate); pm.environment.set('stationId', s.stationId); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get slot by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/slots/{{slotId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "slots",
+                "{{slotId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{prosumerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Any signed-in user."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get slots by station",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/slots/station/{{stationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "slots",
+                "station",
+                "{{stationId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{prosumerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Any signed-in user."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns an array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create slot (Backoffice)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/slots",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "slots"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{backofficeToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stationId\": \"{{stationId}}\",\n  \"slotDate\": \"{{newSlotDate}}\",\n  \"startTime\": \"{{newSlotStart}}\",\n  \"endTime\": \"{{newSlotEnd}}\",\n  \"capacityKw\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Backoffice only. Creates a fresh slot for tomorrow (UTC) so a reservation can be made without clashing with earlier test runs. Needs `stationId` (run \"Get all stations\" first)."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const pad = n => String(n).padStart(2, \"0\");",
+                  "const d = new Date(); d.setUTCDate(d.getUTCDate() + 1);",
+                  "const h = 6 + Math.floor(Math.random() * 14);",
+                  "pm.environment.set('newSlotDate', d.toISOString().substring(0, 10) + 'T00:00:00Z');",
+                  "pm.environment.set('newSlotStart', pad(h) + ':00:00');",
+                  "pm.environment.set('newSlotEnd', pad(h + 1) + ':00:00');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const s = pm.response.json();",
+                  "pm.environment.set('slotId', s.id);",
+                  "pm.environment.set('slotDate', s.slotDate);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update slot (Backoffice)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/slots/{{slotId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "slots",
+                "{{slotId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{backofficeToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slotDate\": \"{{slotDate}}\",\n  \"startTime\": \"{{newSlotStart}}\",\n  \"endTime\": \"{{newSlotEnd}}\",\n  \"capacityKw\": 10,\n  \"availableCapacityKw\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Backoffice only. Run right after \"Create slot\" so the times match. `availableCapacityKw` must be between 0 and `capacityKw`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 Reservations",
+      "item": [
+        {
+          "name": "Create reservation (Prosumer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{prosumerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stationId\": \"{{stationId}}\",\n  \"slotId\": \"{{slotId}}\",\n  \"reservationDate\": \"{{slotDate}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Prosumer only. The prosumer NIC comes from the JWT, never from the body. `reservationDate` must fall on the same day as the slot, within the next 7 days. Run \"Get all slots\" or \"Create slot\" first."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const r = pm.response.json();",
+                  "pm.environment.set('reservationId', r.id);",
+                  "pm.test('Starts Pending / NotStarted', () => { pm.expect(r.status).to.eql(0); pm.expect(r.transactionStatus).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create reservation again - duplicate (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{prosumerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stationId\": \"{{stationId}}\",\n  \"slotId\": \"{{slotId}}\",\n  \"reservationDate\": \"{{slotDate}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Negative test. Must run straight after the create request, while the first reservation is still Pending. Once it is Rejected, Cancelled or Completed the slot is free again and this would succeed."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Message mentions \"already applied\"', () => pm.expect(pm.response.json().message).to.include(\"already applied\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get my reservations (Prosumer)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservations/my",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "my"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{prosumerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Prosumer only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Contains the new reservation', () => pm.expect(pm.response.json().some(r => r.id === pm.environment.get('reservationId'))).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get all reservations (Grid Operator)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{operatorToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Grid Operator only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns an array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get reservation by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservations/{{reservationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "{{reservationId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{prosumerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Any signed-in user. 404 with a message if it does not exist."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approve reservation (Grid Operator)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservations/{{reservationId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "{{reservationId}}",
+                "approve"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{operatorToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Grid Operator only. Only Pending reservations can be approved. Generates the QR token, saved to `qrToken`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test('Approved with a QR token', () => { pm.expect(r.status).to.eql(1); pm.expect(r.qrToken).to.be.a('string').and.not.empty; });",
+                  "pm.environment.set('qrToken', r.qrToken);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 QR Verification",
+      "item": [
+        {
+          "name": "Verify QR (Grid Operator)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservations/verify-qr",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "verify-qr"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{operatorToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "\"{{qrToken}}\"",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Grid Operator only. IMPORTANT: the body is a BARE JSON STRING, for example `\"abc123\"`. It is NOT an object like `{ \"qrToken\": \"abc123\" }`. QR verification is part of ReservationsController, there is no separate /qr route. The reservation must be Approved. On success TransactionStatus becomes Verified (1)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Transaction Verified', () => pm.expect(pm.response.json().transactionStatus).to.eql(1));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 Transactions",
+      "item": [
+        {
+          "name": "Complete reservation (Grid Operator)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservations/{{reservationId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "{{reservationId}}",
+                "complete"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{operatorToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Grid Operator only. There is no separate /transactions route: completing the energy transfer is done here. Requires TransactionStatus = Verified. Sets Status = Completed (4) and TransactionStatus = Completed (2)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test('Completed', () => { pm.expect(r.status).to.eql(4); pm.expect(r.transactionStatus).to.eql(2); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check final state (Prosumer)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservations/{{reservationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "{{reservationId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{prosumerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Confirms the stored reservation is Completed."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status Completed', () => pm.expect(pm.response.json().status).to.eql(4));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08 Negative Tests",
+      "item": [
+        {
+          "name": "No token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservations/my",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "my"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "No Authorization header. The JWT middleware answers 401 with an empty body."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservations/my",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "my"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{invalid.token.value}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Malformed JWT. 401."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Wrong password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nic\": \"{{prosumerNic}}\",\n  \"password\": \"definitely-not-the-password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Valid NIC, wrong password. 401 with the message \"Invalid NIC or password.\""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Message mentions \"Invalid NIC or password\"', () => pm.expect(pm.response.json().message).to.include(\"Invalid NIC or password\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register - duplicate NIC",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nic\": \"{{prosumerNic}}\",\n  \"fullName\": \"Duplicate\",\n  \"email\": \"duplicate.nic@example.test\",\n  \"phoneNumber\": \"0771234567\",\n  \"password\": \"Duplicate-12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "The NIC already exists, so the service throws ConflictException and the API returns 409."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Message mentions \"NIC already exists\"', () => pm.expect(pm.response.json().message).to.include(\"NIC already exists\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register - invalid email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nic\": \"100000000001\",\n  \"fullName\": \"Bad Email\",\n  \"email\": \"not-an-email\",\n  \"phoneNumber\": \"0771234567\",\n  \"password\": \"Valid-12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Validation failure: 400 \"Enter a valid email address.\""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Message mentions \"valid email\"', () => pm.expect(pm.response.json().message).to.include(\"valid email\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - malformed JSON body",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"nic\": ",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Invalid request body. ASP.NET model binding rejects it with 400 before the controller runs."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Prosumer calls a Grid Operator endpoint",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{prosumerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "GET /reservations is GridOperator only. Valid token, wrong role: 403."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Prosumer tries to approve",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservations/{{reservationId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "{{reservationId}}",
+                "approve"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{prosumerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Approve is GridOperator only: 403."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Grid Operator calls a Prosumer endpoint",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservations/my",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "my"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{operatorToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "GET /reservations/my is Prosumer only: 403."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Grid Operator tries to create a reservation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{operatorToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stationId\": \"{{stationId}}\",\n  \"slotId\": \"{{slotId}}\",\n  \"reservationDate\": \"{{slotDate}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "POST /reservations is Prosumer only: 403."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get reservation - unknown id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservations/000000000000000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "000000000000000000000000"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{prosumerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "A well-formed ObjectId that does not exist: 404 \"Reservation not found.\""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Message mentions \"Reservation not found\"', () => pm.expect(pm.response.json().message).to.include(\"Reservation not found\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create reservation - unknown station",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{prosumerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stationId\": \"000000000000000000000000\",\n  \"slotId\": \"{{slotId}}\",\n  \"reservationDate\": \"{{slotDate}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Station id does not exist: 404 \"Station not found.\""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Message mentions \"Station not found\"', () => pm.expect(pm.response.json().message).to.include(\"Station not found\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create reservation - unknown slot",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{prosumerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stationId\": \"{{stationId}}\",\n  \"slotId\": \"000000000000000000000000\",\n  \"reservationDate\": \"{{slotDate}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Slot id does not exist: 404 \"Slot not found.\""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Message mentions \"Slot not found\"', () => pm.expect(pm.response.json().message).to.include(\"Slot not found\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create reservation - date does not match slot",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{prosumerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stationId\": \"{{stationId}}\",\n  \"slotId\": \"{{slotId}}\",\n  \"reservationDate\": \"{{otherDate}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "The reservation date differs from the slot date: 400 \"Reservation date must match the selected slot date.\" (Uses a date 3 days ahead. If your slot happens to be on that day, edit the body.)"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date(); d.setUTCDate(d.getUTCDate() + 3); pm.variables.set('otherDate', d.toISOString().substring(0, 10) + 'T00:00:00Z');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Message mentions \"must match\"', () => pm.expect(pm.response.json().message).to.include(\"must match\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject reservation that is not pending",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservations/{{reservationId}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "{{reservationId}}",
+                "reject"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{operatorToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Run after the main flow, when the reservation is Completed: 400 \"Only pending reservations can be rejected.\""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Message mentions \"Only pending\"', () => pm.expect(pm.response.json().message).to.include(\"Only pending\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approve reservation that is not pending",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservations/{{reservationId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "{{reservationId}}",
+                "approve"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{operatorToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Run after the main flow: 400 \"Only pending reservations can be approved.\""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Message mentions \"Only pending\"', () => pm.expect(pm.response.json().message).to.include(\"Only pending\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify QR - invalid token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservations/verify-qr",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "verify-qr"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{operatorToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "\"this-token-does-not-exist\"",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "The bare JSON string matches no reservation: 404 \"Invalid QR token.\""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Message mentions \"Invalid QR token\"', () => pm.expect(pm.response.json().message).to.include(\"Invalid QR token\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify QR - body sent as an object",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservations/verify-qr",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "verify-qr"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{operatorToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qrToken\": \"{{qrToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "WRONG format on purpose. The endpoint expects a bare string, so an object body fails model binding: 400."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Complete reservation without a verified QR",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservations/{{reservationId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "{{reservationId}}",
+                "complete"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{operatorToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Completion needs TransactionStatus = Verified. After the main flow the reservation is already Completed, so this returns the same 400 \"Reservation QR must be verified before completion.\" To see the exact before-verification case, run it between Approve and Verify QR."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Message mentions \"must be verified\"', () => pm.expect(pm.response.json().message).to.include(\"must be verified\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Full slot 1/3 - create slot (Backoffice)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/slots",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "slots"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{backofficeToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stationId\": \"{{stationId}}\",\n  \"slotDate\": \"{{newSlotDate}}\",\n  \"startTime\": \"{{newSlotStart}}\",\n  \"endTime\": \"{{newSlotEnd}}\",\n  \"capacityKw\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Setup for the \"slot is full\" test. Creates a fresh slot."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const pad = n => String(n).padStart(2, \"0\");",
+                  "const d = new Date(); d.setUTCDate(d.getUTCDate() + 1);",
+                  "const h = 6 + Math.floor(Math.random() * 14);",
+                  "pm.environment.set('newSlotDate', d.toISOString().substring(0, 10) + 'T00:00:00Z');",
+                  "pm.environment.set('newSlotStart', pad(h) + ':00:00');",
+                  "pm.environment.set('newSlotEnd', pad(h + 1) + ':00:00');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const s = pm.response.json();",
+                  "pm.environment.set('fullSlotId', s.id);",
+                  "pm.environment.set('fullSlotDate', s.slotDate);",
+                  "pm.environment.set('fullSlotStart', s.startTime);",
+                  "pm.environment.set('fullSlotEnd', s.endTime);",
+                  "pm.environment.set('fullSlotCapacity', s.capacityKw);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Full slot 2/3 - set available capacity to 0 (Backoffice)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/slots/{{fullSlotId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "slots",
+                "{{fullSlotId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{backofficeToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slotDate\": \"{{fullSlotDate}}\",\n  \"startTime\": \"{{fullSlotStart}}\",\n  \"endTime\": \"{{fullSlotEnd}}\",\n  \"capacityKw\": {{fullSlotCapacity}},\n  \"availableCapacityKw\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Setup: leaves the slot with no available capacity."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Full slot 3/3 - reserve the full slot (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{prosumerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stationId\": \"{{stationId}}\",\n  \"slotId\": \"{{fullSlotId}}\",\n  \"reservationDate\": \"{{fullSlotDate}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Slot has AvailableCapacityKw = 0: 400 \"Selected slot is full.\""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Message mentions \"slot is full\"', () => pm.expect(pm.response.json().message).to.include(\"slot is full\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "09 Optional Flows",
+      "description": "Independent flows. Each creates its own slot and reservation and uses separate variables (flow*), so they do not touch the main flow. Requires stationId and the Backoffice, Prosumer and Grid Operator tokens.",
+      "item": [
+        {
+          "name": "Reject flow (a NEW pending reservation)",
+          "description": "Uses its own slot and reservation variables, so it does not disturb the main flow.",
+          "item": [
+            {
+              "name": "1. Create fresh slot (Backoffice)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/slots",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "slots"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{backofficeToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"stationId\": \"{{stationId}}\",\n  \"slotDate\": \"{{newSlotDate}}\",\n  \"startTime\": \"{{newSlotStart}}\",\n  \"endTime\": \"{{newSlotEnd}}\",\n  \"capacityKw\": 10\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Backoffice only. Creates a fresh slot for tomorrow (UTC) so a reservation can be made without clashing with earlier test runs. Needs `stationId` (run \"Get all stations\" first)."
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const pad = n => String(n).padStart(2, \"0\");",
+                      "const d = new Date(); d.setUTCDate(d.getUTCDate() + 1);",
+                      "const h = 6 + Math.floor(Math.random() * 14);",
+                      "pm.environment.set('newSlotDate', d.toISOString().substring(0, 10) + 'T00:00:00Z');",
+                      "pm.environment.set('newSlotStart', pad(h) + ':00:00');",
+                      "pm.environment.set('newSlotEnd', pad(h + 1) + ':00:00');"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                      "const s = pm.response.json();",
+                      "pm.environment.set('flowSlotId', s.id);",
+                      "pm.environment.set('flowSlotDate', s.slotDate);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "2. Create reservation (Prosumer)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/reservations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "reservations"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{prosumerToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"stationId\": \"{{stationId}}\",\n  \"slotId\": \"{{flowSlotId}}\",\n  \"reservationDate\": \"{{flowSlotDate}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                      "pm.environment.set('flowReservationId', pm.response.json().id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "3. Reject reservation (Grid Operator)",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/reservations/{{flowReservationId}}/reject",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "reservations",
+                    "{{flowReservationId}}",
+                    "reject"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{operatorToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Grid Operator only. Only Pending reservations can be rejected. Do not approve this reservation first. Expected: 200 and status = 2 (Rejected)."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Status is Rejected (2)', () => pm.expect(pm.response.json().status).to.eql(2));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Update flow (Pending reservation moves to another slot)",
+          "item": [
+            {
+              "name": "1. Create slot A (Backoffice)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/slots",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "slots"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{backofficeToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"stationId\": \"{{stationId}}\",\n  \"slotDate\": \"{{newSlotDate}}\",\n  \"startTime\": \"{{newSlotStart}}\",\n  \"endTime\": \"{{newSlotEnd}}\",\n  \"capacityKw\": 10\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Backoffice only. Creates a fresh slot for tomorrow (UTC) so a reservation can be made without clashing with earlier test runs. Needs `stationId` (run \"Get all stations\" first)."
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const pad = n => String(n).padStart(2, \"0\");",
+                      "const d = new Date(); d.setUTCDate(d.getUTCDate() + 1);",
+                      "const h = 6 + Math.floor(Math.random() * 14);",
+                      "pm.environment.set('newSlotDate', d.toISOString().substring(0, 10) + 'T00:00:00Z');",
+                      "pm.environment.set('newSlotStart', pad(h) + ':00:00');",
+                      "pm.environment.set('newSlotEnd', pad(h + 1) + ':00:00');"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                      "const s = pm.response.json();",
+                      "pm.environment.set('flowSlotId', s.id);",
+                      "pm.environment.set('flowSlotDate', s.slotDate);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "2. Create reservation on slot A (Prosumer)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/reservations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "reservations"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{prosumerToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"stationId\": \"{{stationId}}\",\n  \"slotId\": \"{{flowSlotId}}\",\n  \"reservationDate\": \"{{flowSlotDate}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                      "pm.environment.set('flowReservationId', pm.response.json().id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "3. Create slot B (Backoffice)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/slots",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "slots"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{backofficeToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"stationId\": \"{{stationId}}\",\n  \"slotDate\": \"{{newSlotDate}}\",\n  \"startTime\": \"{{newSlotStart}}\",\n  \"endTime\": \"{{newSlotEnd}}\",\n  \"capacityKw\": 10\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Backoffice only. Creates a fresh slot for tomorrow (UTC) so a reservation can be made without clashing with earlier test runs. Needs `stationId` (run \"Get all stations\" first)."
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const pad = n => String(n).padStart(2, \"0\");",
+                      "const d = new Date(); d.setUTCDate(d.getUTCDate() + 1);",
+                      "const h = 6 + Math.floor(Math.random() * 14);",
+                      "pm.environment.set('newSlotDate', d.toISOString().substring(0, 10) + 'T00:00:00Z');",
+                      "pm.environment.set('newSlotStart', pad(h) + ':00:00');",
+                      "pm.environment.set('newSlotEnd', pad(h + 1) + ':00:00');"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                      "const s = pm.response.json();",
+                      "pm.environment.set('flowSlotId2', s.id);",
+                      "pm.environment.set('flowSlotDate2', s.slotDate);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "4. Update reservation to slot B (Prosumer)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/reservations/{{flowReservationId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "reservations",
+                    "{{flowReservationId}}"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{prosumerToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"slotId\": \"{{flowSlotId2}}\",\n  \"reservationDate\": \"{{flowSlotDate2}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Prosumer only, own reservation, Pending only, at least 12 hours before the start. Slot B is on the same day as slot A and starts at a random hour, so if slot B starts within 12 hours the API returns 400. Re-run step 3 in that case."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Cancel flow (Pending reservation)",
+          "item": [
+            {
+              "name": "1. Create fresh slot (Backoffice)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/slots",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "slots"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{backofficeToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"stationId\": \"{{stationId}}\",\n  \"slotDate\": \"{{newSlotDate}}\",\n  \"startTime\": \"{{newSlotStart}}\",\n  \"endTime\": \"{{newSlotEnd}}\",\n  \"capacityKw\": 10\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Backoffice only. Creates a fresh slot for tomorrow (UTC) so a reservation can be made without clashing with earlier test runs. Needs `stationId` (run \"Get all stations\" first)."
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const pad = n => String(n).padStart(2, \"0\");",
+                      "const d = new Date(); d.setUTCDate(d.getUTCDate() + 1);",
+                      "const h = 6 + Math.floor(Math.random() * 14);",
+                      "pm.environment.set('newSlotDate', d.toISOString().substring(0, 10) + 'T00:00:00Z');",
+                      "pm.environment.set('newSlotStart', pad(h) + ':00:00');",
+                      "pm.environment.set('newSlotEnd', pad(h + 1) + ':00:00');"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                      "const s = pm.response.json();",
+                      "pm.environment.set('flowSlotId', s.id);",
+                      "pm.environment.set('flowSlotDate', s.slotDate);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "2. Create reservation (Prosumer)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/reservations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "reservations"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{prosumerToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"stationId\": \"{{stationId}}\",\n  \"slotId\": \"{{flowSlotId}}\",\n  \"reservationDate\": \"{{flowSlotDate}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                      "pm.environment.set('flowReservationId', pm.response.json().id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "3. Cancel reservation (Prosumer)",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/reservations/{{flowReservationId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "reservations",
+                    "{{flowReservationId}}"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{prosumerToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Prosumer only, own reservation. Refused (400) when the slot starts in less than 12 hours, or when the reservation is already Completed or Cancelled. Slots created by this collection are for tomorrow, so an early-hour slot run late in the evening can fall inside the 12-hour lock. Re-run step 1 if so."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Message mentions \"cancel\"', () => pm.expect(pm.response.json().message).to.include(\"cancel\"));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
