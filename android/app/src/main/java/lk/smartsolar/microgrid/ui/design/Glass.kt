@@ -117,15 +117,24 @@ fun IconBadge(icon: ImageVector, tint: Color, modifier: Modifier = Modifier, siz
     }
 }
 
-/** Round avatar showing the initials of a name. */
+/** Round avatar: the user's [picture] when there is one, otherwise the initials of a name. */
 @Composable
-fun Avatar(name: String, modifier: Modifier = Modifier, size: Dp = 44.dp) {
+fun Avatar(name: String, modifier: Modifier = Modifier, size: Dp = 44.dp, picture: androidx.compose.ui.graphics.ImageBitmap? = null) {
     val initials = name.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }.take(2).joinToString("") { it.first().uppercase() }.ifEmpty { "S" }
     Box(
         modifier.size(size).clip(CircleShape).background(Brush.linearGradient(listOf(SunChainBlue, Color(0xFF3B82F6)))),
         contentAlignment = Alignment.Center,
     ) {
-        Text(initials, color = Color.White, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Black)
+        if (picture != null) {
+            androidx.compose.foundation.Image(
+                picture,
+                contentDescription = "Profile picture of $name",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+            )
+        } else {
+            Text(initials, color = Color.White, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Black)
+        }
     }
 }
 

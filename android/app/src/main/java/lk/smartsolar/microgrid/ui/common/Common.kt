@@ -15,9 +15,12 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -141,3 +144,15 @@ fun ConfirmDialog(
 
 @Composable
 fun VSpace(dp: Int) = Spacer(Modifier.height(dp.dp))
+
+/** The [Avatar] for the signed-in user: their uploaded picture if they have one, otherwise their initials. */
+@Composable
+fun SessionAvatar(name: String, modifier: Modifier = Modifier, size: androidx.compose.ui.unit.Dp = 44.dp) {
+    val image by LocalContainer.current.session.profileImage.collectAsState()
+    val picture by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, image) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            lk.smartsolar.microgrid.util.ProfileImages.decodeBase64(image)?.asImageBitmap()
+        }
+    }
+    lk.smartsolar.microgrid.ui.design.Avatar(name, modifier, size, picture)
+}

@@ -67,6 +67,32 @@ public class AuthController : ControllerBase
         return Ok(profile);
     }
 
+    // PUT: /api/auth/profile/image
+    // Body: { "imageBase64": "<base64 of a JPEG, PNG or WebP>" }
+    [HttpPut("profile/image")]
+    [Authorize]
+    public async Task<IActionResult> UpdateProfileImage(
+        [FromBody] UpdateProfileImageRequestDto request)
+    {
+        var profile =
+            await _authService.UpdateProfileImageAsync(
+                CurrentNic(),
+                request);
+
+        return Ok(profile);
+    }
+
+    // DELETE: /api/auth/profile/image
+    [HttpDelete("profile/image")]
+    [Authorize]
+    public async Task<IActionResult> RemoveProfileImage()
+    {
+        var profile =
+            await _authService.RemoveProfileImageAsync(CurrentNic());
+
+        return Ok(profile);
+    }
+
     private string CurrentNic()
     {
         return User.FindFirst(

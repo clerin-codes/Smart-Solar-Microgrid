@@ -4,7 +4,7 @@ API tests for the Smart Solar Microgrid backend (ASP.NET Core Web API, MongoDB, 
 
 | File | Purpose |
 |---|---|
-| `Smart-Solar-Microgrid.postman_collection.json` | 63 requests in 9 folders, with test scripts that check status codes and capture tokens and ids |
+| `Smart-Solar-Microgrid.postman_collection.json` | 65 requests in 9 folders, with test scripts that check status codes and capture tokens and ids |
 | `Smart-Solar-Microgrid.postman_environment.json` | Local environment (`baseUrl = http://localhost:5130/api`) |
 | [TESTING_GUIDE.md](TESTING_GUIDE.md) | The order to run things in, and the expected results |
 
@@ -22,7 +22,7 @@ Do not commit an environment file that contains passwords or tokens. The token a
 
 | Folder | Contents |
 |---|---|
-| 01 Authentication | Login for the three roles, register, get and update own profile |
+| 01 Authentication | Login for the three roles, register, get and update own profile, upload and remove the profile picture |
 | 02 Users | Backoffice user management (`/users`) |
 | 03 Stations | List, get, create, update and deactivate stations |
 | 04 Energy Slots | List, get, get by station, create and update slots |

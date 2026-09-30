@@ -13,6 +13,7 @@ Field types are in [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md). This file describes
 - Email must be unique. This is checked in the auth service on registration and on profile update, and a clash returns HTTP 409. There is no database index behind it.
 - Registration requires a NIC, a full name, a valid email, a phone number matching `^\+?[0-9]{9,12}$`, and a password of at least 8 characters. Self-registered users are always Prosumers.
 - Passwords are stored as BCrypt hashes.
+- A user can upload or remove their own profile picture with `PUT` and `DELETE /api/auth/profile/image`. The API checks the base64 is a real JPEG, PNG or WebP under 1 MB and stores it on the user document as text.
 - Users are deactivated, never deleted (`IsActive = false`). Inactive users cannot log in, and cannot create, approve or complete reservations.
 - Backoffice users can create, update, deactivate and reactivate any user through `/api/users`. Every signed-in user can read and update only their own profile through `/api/auth/profile`.
 

@@ -13,4 +13,7 @@ public class ProfileResponseDto
     public string Role { get; set; } = string.Empty;
 
     public bool IsActive { get; set; }
+
+    /// <summary>Base64 profile picture, or null when none has been uploaded.</summary>
+    public string? ProfileImage { get; set; }
 }

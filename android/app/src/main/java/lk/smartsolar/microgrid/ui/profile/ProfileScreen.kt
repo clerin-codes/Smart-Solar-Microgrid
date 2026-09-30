@@ -3,7 +3,26 @@ package lk.smartsolar.microgrid.ui.profile
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.PhotoCamera
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import lk.smartsolar.microgrid.ui.common.SessionAvatar
+import lk.smartsolar.microgrid.ui.theme.BorderSoft
+import lk.smartsolar.microgrid.util.ProfileImages
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -56,7 +75,6 @@ import lk.smartsolar.microgrid.ui.common.ErrorBanner
 import lk.smartsolar.microgrid.ui.common.LocalContainer
 import lk.smartsolar.microgrid.ui.common.LocalSnackbar
 import lk.smartsolar.microgrid.ui.common.containerViewModel
-import lk.smartsolar.microgrid.ui.design.Avatar
 import lk.smartsolar.microgrid.ui.design.ButtonKind
 import lk.smartsolar.microgrid.ui.design.GlassCard
 import lk.smartsolar.microgrid.ui.design.HeroCard
@@ -76,6 +94,7 @@ data class ProfileUi(
     val loading: Boolean = true,
     val saving: Boolean = false,
     val syncing: Boolean = false,
+    val photoBusy: Boolean = false,
     val error: String? = null,
 )
 
@@ -120,6 +139,41 @@ class ProfileViewModel(
         }
     }
 
+    /** Shrinks the picked photo to a small square JPEG, then uploads it as base64 to be stored on the profile. */
+    fun uploadPicked(context: android.content.Context, uri: android.net.Uri) {
+        if (_ui.value.photoBusy) return
+        _ui.update { it.copy(photoBusy = true) }
+        viewModelScope.launch {
+            try {
+                val base64 = ProfileImages.toBase64(context.applicationContext, uri)
+                val updated = auth.uploadProfileImage(base64)
+                _ui.update { it.copy(profile = updated, photoBusy = false) }
+                _events.emit("Profile photo updated")
+            } catch (e: AppException) {
+                _ui.update { it.copy(photoBusy = false) }
+                _events.emit(e.message ?: "Could not upload the photo.")
+            } catch (e: Exception) {
+                _ui.update { it.copy(photoBusy = false) }
+                _events.emit("That picture could not be read. Try a different photo.")
+            }
+        }
+    }
+
+    fun removePhoto() {
+        if (_ui.value.photoBusy) return
+        _ui.update { it.copy(photoBusy = true) }
+        viewModelScope.launch {
+            try {
+                val updated = auth.removeProfileImage()
+                _ui.update { it.copy(profile = updated, photoBusy = false) }
+                _events.emit("Profile photo removed")
+            } catch (e: AppException) {
+                _ui.update { it.copy(photoBusy = false) }
+                _events.emit(e.message ?: "Could not remove the photo.")
+            }
+        }
+    }
+
     fun syncNow() {
         if (_ui.value.syncing) return
         _ui.update { it.copy(syncing = true) }
@@ -151,6 +205,12 @@ fun ProfileScreen() {
 
     val displayName = ui.profile?.fullName ?: session?.fullName.orEmpty()
     val roleLabel = if (session?.role == Session.ROLE_GRID_OPERATOR) "Grid Operator" else "Solar Prosumer"
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val hasPhoto by container.session.profileImage.collectAsState()
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) vm.uploadPicked(context, uri)
+    }
+    val pickPhoto = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
 
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("Profile")
@@ -162,11 +222,39 @@ fun ProfileScreen() {
 
             HeroCard {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
-                    Avatar(displayName, size = 68.dp)
+                    Box(
+                        Modifier
+                            .size(76.dp)
+                            .clickable(role = Role.Button, enabled = !ui.photoBusy) { pickPhoto() }
+                            .semantics { contentDescription = "Change profile photo" }
+                            .testTag("profile_photo"),
+                    ) {
+                        SessionAvatar(displayName, size = 76.dp)
+                        Box(
+                            Modifier.align(Alignment.BottomEnd).size(26.dp).clip(CircleShape).background(Color.White).border(1.dp, BorderSoft, CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (ui.photoBusy) CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp, color = SunChainBlue)
+                            else Icon(Icons.Rounded.PhotoCamera, contentDescription = null, Modifier.size(16.dp), tint = SunChainBlue)
+                        }
+                    }
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(displayName, style = MaterialTheme.typography.titleLarge)
                         Text(roleLabel, style = MaterialTheme.typography.bodyMedium, color = SunChainBlue)
                         Text("NIC ${session?.nic ?: "-"}", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                    SunChainButton(
+                        if (ui.photoBusy) "Uploading..." else if (hasPhoto != null) "Change" else "Add photo",
+                        onClick = pickPhoto, modifier = Modifier.weight(1f).testTag("change_photo"),
+                        kind = ButtonKind.Secondary, enabled = !ui.photoBusy, icon = Icons.Rounded.PhotoCamera, compact = true,
+                    )
+                    if (hasPhoto != null) {
+                        SunChainButton(
+                            "Remove", onClick = vm::removePhoto, modifier = Modifier.weight(1f).testTag("remove_photo"),
+                            kind = ButtonKind.Ghost, enabled = !ui.photoBusy, icon = Icons.Rounded.Delete, compact = true,
+                        )
                     }
                 }
             }

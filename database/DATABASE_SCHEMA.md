@@ -39,6 +39,7 @@ The models use PascalCase property names, so the stored field names are PascalCa
 | `PasswordHash` | string | yes | BCrypt hash. The plaintext is never stored |
 | `Role` | `UserRole` | yes | |
 | `IsActive` | bool | yes | Default `true`. Inactive users cannot log in |
+| `ProfileImage` | string | no | Profile picture as base64 text of a JPEG, PNG or WebP (no `data:` prefix), at most 1 MB decoded. Absent until the user uploads one. Returned by `GET /api/auth/profile`, not by `/api/users` |
 | `CreatedAt` | DateTime (UTC) | yes | |
 | `UpdatedAt` | DateTime (UTC) | yes | |
 

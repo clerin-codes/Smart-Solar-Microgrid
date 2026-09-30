@@ -26,9 +26,13 @@ data class ProfileDto(
     val phoneNumber: String,
     val role: String,
     val isActive: Boolean,
+    /** Base64 JPEG/PNG/WebP profile picture, if the user has uploaded one. */
+    val profileImage: String? = null,
 )
 
 data class UpdateProfileRequest(val fullName: String, val email: String, val phoneNumber: String)
+
+data class ProfileImageRequest(val imageBase64: String)
 
 data class ScheduleDto(
     val day: String,
@@ -100,6 +104,12 @@ interface ApiService {
 
     @PUT("auth/profile")
     suspend fun updateProfile(@Body body: UpdateProfileRequest): ProfileDto
+
+    @PUT("auth/profile/image")
+    suspend fun uploadProfileImage(@Body body: ProfileImageRequest): ProfileDto
+
+    @DELETE("auth/profile/image")
+    suspend fun removeProfileImage(): ProfileDto
 
     @GET("stations")
     suspend fun stations(): List<StationDto>

@@ -15,6 +15,7 @@ import lk.smartsolar.microgrid.data.remote.AppException
 import lk.smartsolar.microgrid.data.remote.CreateReservationRequest
 import lk.smartsolar.microgrid.data.remote.LoginRequest
 import lk.smartsolar.microgrid.data.remote.ProfileDto
+import lk.smartsolar.microgrid.data.remote.ProfileImageRequest
 import lk.smartsolar.microgrid.data.remote.RegisterRequest
 import lk.smartsolar.microgrid.data.remote.UpdateProfileRequest
 import lk.smartsolar.microgrid.data.remote.UpdateReservationRequest
@@ -44,7 +45,13 @@ class AuthRepository(
         return startSession(r.nic, r.fullName, r.role, r.token)
     }
 
-    suspend fun profile(): ProfileDto = api.call { it.profile() }
+    suspend fun profile(): ProfileDto = api.call { it.profile() }.also { session.setProfileImage(it.profileImage) }
+
+    suspend fun uploadProfileImage(base64: String): ProfileDto =
+        api.call { it.uploadProfileImage(ProfileImageRequest(base64)) }.also { session.setProfileImage(it.profileImage) }
+
+    suspend fun removeProfileImage(): ProfileDto =
+        api.call { it.removeProfileImage() }.also { session.setProfileImage(it.profileImage) }
 
     suspend fun updateProfile(fullName: String, email: String, phone: String): ProfileDto {
         val updated = api.call { it.updateProfile(UpdateProfileRequest(fullName.trim(), email.trim(), phone.trim())) }

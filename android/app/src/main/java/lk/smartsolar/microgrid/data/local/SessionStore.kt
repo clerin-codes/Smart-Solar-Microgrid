@@ -31,6 +31,10 @@ class SessionStore(context: Context) {
     private val _lastSync = MutableStateFlow(prefs.getLong(KEY_LAST_SYNC, 0L))
     val lastSync: StateFlow<Long> = _lastSync
 
+    private val _profileImage = MutableStateFlow(prefs.getString(KEY_IMAGE, null))
+    /** Base64 profile picture of the signed-in user, shown in the app bars. Cleared on logout. */
+    val profileImage: StateFlow<String?> = _profileImage
+
     val token: String? get() = _session.value?.token
 
     private fun read(): Session? {
@@ -53,6 +57,12 @@ class SessionStore(context: Context) {
         _session.value = session
     }
 
+    fun setProfileImage(base64: String?) {
+        if (base64 == _profileImage.value) return
+        prefs.edit().apply { if (base64 == null) remove(KEY_IMAGE) else putString(KEY_IMAGE, base64) }.apply()
+        _profileImage.value = base64
+    }
+
     fun updateName(fullName: String) {
         val current = _session.value ?: return
         save(current.copy(fullName = fullName))
@@ -60,10 +70,11 @@ class SessionStore(context: Context) {
 
     fun clear() {
         prefs.edit()
-            .remove(KEY_TOKEN).remove(KEY_NIC).remove(KEY_NAME).remove(KEY_ROLE).remove(KEY_LAST_SYNC)
+            .remove(KEY_TOKEN).remove(KEY_NIC).remove(KEY_NAME).remove(KEY_ROLE).remove(KEY_LAST_SYNC).remove(KEY_IMAGE)
             .apply()
         _session.value = null
         _lastSync.value = 0L
+        _profileImage.value = null
     }
 
     fun setBaseUrl(url: String) {
@@ -84,5 +95,6 @@ class SessionStore(context: Context) {
         const val KEY_ROLE = "role"
         const val KEY_BASE_URL = "base_url"
         const val KEY_LAST_SYNC = "last_sync"
+        const val KEY_IMAGE = "profile_image"
     }
 }

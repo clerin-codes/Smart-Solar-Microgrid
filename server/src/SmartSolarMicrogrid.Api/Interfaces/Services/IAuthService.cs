@@ -13,6 +13,13 @@ public interface IAuthService
     Task<ProfileResponseDto> GetProfileAsync(
         string nic);
 
+    Task<ProfileResponseDto> UpdateProfileImageAsync(
+        string nic,
+        UpdateProfileImageRequestDto request);
+
+    Task<ProfileResponseDto> RemoveProfileImageAsync(
+        string nic);
+
     Task<ProfileResponseDto> UpdateProfileAsync(
         string nic,
         UpdateProfileRequestDto request);

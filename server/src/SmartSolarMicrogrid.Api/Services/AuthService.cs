@@ -202,6 +202,94 @@ public class AuthService : IAuthService
         return ToProfile(user);
     }
 
+    // Profile pictures are stored as base64 text on the user document. The app sends a small resized JPEG,
+    // and the limit here stops anything much bigger being stored.
+    private const int MaxProfileImageBytes = 1_048_576;
+
+    public async Task<ProfileResponseDto> UpdateProfileImageAsync(
+        string nic,
+        UpdateProfileImageRequestDto request)
+    {
+        var user = await _userRepository.GetByNICAsync(nic);
+
+        if (user == null)
+        {
+            throw new KeyNotFoundException("User not found.");
+        }
+
+        user.ProfileImage = NormaliseProfileImage(request.ImageBase64);
+        user.UpdatedAt = DateTime.UtcNow;
+
+        await _userRepository.UpdateAsync(user);
+
+        return ToProfile(user);
+    }
+
+    public async Task<ProfileResponseDto> RemoveProfileImageAsync(
+        string nic)
+    {
+        var user = await _userRepository.GetByNICAsync(nic);
+
+        if (user == null)
+        {
+            throw new KeyNotFoundException("User not found.");
+        }
+
+        user.ProfileImage = null;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        await _userRepository.UpdateAsync(user);
+
+        return ToProfile(user);
+    }
+
+    /// <summary>Checks the base64 is a real, reasonably small JPEG/PNG/WebP and returns it without any data: prefix.</summary>
+    private static string NormaliseProfileImage(string? input)
+    {
+        var text = input?.Trim() ?? string.Empty;
+
+        var comma = text.IndexOf(',');
+        if (text.StartsWith("data:", StringComparison.OrdinalIgnoreCase) && comma >= 0)
+        {
+            text = text[(comma + 1)..];
+        }
+
+        if (text.Length == 0)
+        {
+            throw new ArgumentException("Choose an image to upload.");
+        }
+
+        // Base64 is about 4/3 the size of the bytes, so reject oversize text before decoding it.
+        if (text.Length > MaxProfileImageBytes * 4 / 3 + 8)
+        {
+            throw new ArgumentException("The image is too large. Choose a smaller one.");
+        }
+
+        var bytes = new byte[text.Length];
+
+        if (!Convert.TryFromBase64String(text, bytes, out var length))
+        {
+            throw new ArgumentException("The image data is not valid base64.");
+        }
+
+        if (length > MaxProfileImageBytes)
+        {
+            throw new ArgumentException("The image is too large. Choose a smaller one.");
+        }
+
+        var isJpeg = length > 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF;
+        var isPng = length > 8 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47;
+        var isWebp = length > 12 && bytes[0] == 0x52 && bytes[1] == 0x49 && bytes[2] == 0x46 && bytes[3] == 0x46
+            && bytes[8] == 0x57 && bytes[9] == 0x45 && bytes[10] == 0x42 && bytes[11] == 0x50;
+
+        if (!isJpeg && !isPng && !isWebp)
+        {
+            throw new ArgumentException("The image must be a JPEG, PNG or WebP file.");
+        }
+
+        return Convert.ToBase64String(bytes, 0, length);
+    }
+
     // Same rules as the Android registration form.
     private const int MinPasswordLength = 8;
 
@@ -238,7 +326,8 @@ public class AuthService : IAuthService
             Email = user.Email,
             PhoneNumber = user.PhoneNumber,
             Role = user.Role.ToString(),
-            IsActive = user.IsActive
+            IsActive = user.IsActive,
+            ProfileImage = user.ProfileImage
         };
     }
 

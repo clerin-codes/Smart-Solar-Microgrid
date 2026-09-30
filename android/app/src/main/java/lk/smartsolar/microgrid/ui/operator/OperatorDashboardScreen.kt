@@ -51,7 +51,7 @@ import lk.smartsolar.microgrid.ui.common.ReservationCard
 import lk.smartsolar.microgrid.ui.common.ReservationsViewModel
 import lk.smartsolar.microgrid.ui.common.SectionTitle
 import lk.smartsolar.microgrid.ui.common.containerViewModel
-import lk.smartsolar.microgrid.ui.design.Avatar
+import lk.smartsolar.microgrid.ui.common.SessionAvatar
 import lk.smartsolar.microgrid.ui.design.ButtonKind
 import lk.smartsolar.microgrid.ui.design.HeroCard
 import lk.smartsolar.microgrid.ui.design.MetricCard
@@ -107,7 +107,7 @@ fun OperatorDashboardScreen(onScan: () -> Unit, onOpen: (String) -> Unit, onProf
         ) {
             Logo(Modifier.size(44.dp))
             Spacer(Modifier.weight(1f))
-            Avatar(fullName, Modifier.clickable(role = Role.Button, onClick = onProfile))
+            SessionAvatar(fullName, Modifier.clickable(role = Role.Button, onClick = onProfile))
         }
         OfflineBanner(online, lastSync)
         PullToRefreshBox(isRefreshing = ui.refreshing, onRefresh = vm::refresh, modifier = Modifier.fillMaxSize()) {
