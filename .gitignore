@@ -55,6 +55,7 @@ local.properties
 # ASP.NET local development
 **/appsettings.Local.json
 **/appsettings.*.local.json
+**/appsettings.Development.json
 **/appsettings.json
 !**/appsettings.example.json
 
