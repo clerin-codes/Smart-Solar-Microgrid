@@ -30,6 +30,10 @@ public interface IReservationService
         string operatorNIC,
         string reservationId);
 
+    Task<EnergyReservation> RejectAsync(
+        string operatorNIC,
+        string reservationId);
+
     Task<EnergyReservation> VerifyQRAsync(
         string operatorNIC,
         string qrToken);
