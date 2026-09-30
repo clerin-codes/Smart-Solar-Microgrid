@@ -8,6 +8,8 @@ public interface IStationRepository
 
     Task<SolarStationInfo?> GetByIdAsync(string id);
 
+    Task<SolarStationInfo?> GetByCodeAsync(string stationCode);
+
     Task CreateAsync(SolarStationInfo station);
 
     Task UpdateAsync(SolarStationInfo station);
