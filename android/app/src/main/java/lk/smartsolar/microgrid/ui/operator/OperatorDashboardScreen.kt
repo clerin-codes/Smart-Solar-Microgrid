@@ -1,5 +1,6 @@
 package lk.smartsolar.microgrid.ui.operator
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,10 +9,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.HourglassTop
 import androidx.compose.material.icons.rounded.QrCodeScanner
@@ -29,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -63,9 +67,12 @@ import lk.smartsolar.microgrid.util.Fmt
 
 private const val REFRESH_MS = 15_000L
 
+/** Pending requests previewed on the dashboard; the Approvals tab lists them all. */
+private const val PREVIEW_COUNT = 3
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OperatorDashboardScreen(onScan: () -> Unit, onOpen: (String) -> Unit) {
+fun OperatorDashboardScreen(onScan: () -> Unit, onOpen: (String) -> Unit, onProfile: () -> Unit = {}, onSeeMore: () -> Unit = {}) {
     val container = LocalContainer.current
     val session by container.session.session.collectAsState()
     val online by container.online.collectAsState()
@@ -98,9 +105,9 @@ fun OperatorDashboardScreen(onScan: () -> Unit, onOpen: (String) -> Unit) {
             Modifier.fillMaxWidth().padding(horizontal = Spacing.screen, vertical = Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Logo(Modifier.width(120.dp).height(30.dp))
+            Logo(Modifier.size(44.dp))
             Spacer(Modifier.weight(1f))
-            Avatar(fullName)
+            Avatar(fullName, Modifier.clickable(role = Role.Button, onClick = onProfile))
         }
         OfflineBanner(online, lastSync)
         PullToRefreshBox(isRefreshing = ui.refreshing, onRefresh = vm::refresh, modifier = Modifier.fillMaxSize()) {
@@ -128,7 +135,7 @@ fun OperatorDashboardScreen(onScan: () -> Unit, onOpen: (String) -> Unit) {
 
                 SectionTitle("Awaiting approval")
                 if (pending.isEmpty()) EmptyState("Nothing waiting for approval", icon = Icons.Rounded.CheckCircle)
-                pending.forEach { r ->
+                pending.take(PREVIEW_COUNT).forEach { r ->
                     ReservationCard(
                         r, names[r.stationId] ?: "Station", onClick = { onOpen(r.id) }, showNic = true,
                         footer = {
@@ -139,6 +146,12 @@ fun OperatorDashboardScreen(onScan: () -> Unit, onOpen: (String) -> Unit) {
                                 kind = ButtonKind.Success, enabled = approving == null, icon = Icons.Rounded.CheckCircle, compact = true,
                             )
                         },
+                    )
+                }
+                if (pending.size > PREVIEW_COUNT) {
+                    SunChainButton(
+                        "See more (${pending.size - PREVIEW_COUNT} more)", onSeeMore, Modifier.fillMaxWidth().testTag("see_more_approvals"),
+                        kind = ButtonKind.Secondary, icon = Icons.AutoMirrored.Rounded.ArrowForward, compact = true,
                     )
                 }
                 Text(

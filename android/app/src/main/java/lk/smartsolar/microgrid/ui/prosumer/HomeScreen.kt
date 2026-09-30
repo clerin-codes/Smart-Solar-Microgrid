@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -29,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import lk.smartsolar.microgrid.R
 import lk.smartsolar.microgrid.data.ReservationStatus
 import lk.smartsolar.microgrid.data.statusEnum
 import lk.smartsolar.microgrid.ui.common.EmptyState
@@ -77,7 +79,7 @@ fun ProsumerHomeScreen(onBook: () -> Unit, onOpen: (String) -> Unit, onProfile: 
             Modifier.fillMaxWidth().padding(horizontal = Spacing.screen, vertical = Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Logo(Modifier.width(120.dp).height(30.dp))
+            Logo(Modifier.size(44.dp))
             Spacer(Modifier.weight(1f))
             Avatar(fullName, Modifier.clickable(role = Role.Button, onClick = onProfile))
         }
@@ -87,7 +89,7 @@ fun ProsumerHomeScreen(onBook: () -> Unit, onOpen: (String) -> Unit, onProfile: 
                 Modifier.verticalScroll(rememberScrollState()).padding(horizontal = Spacing.screen).padding(bottom = Spacing.lg),
                 verticalArrangement = Arrangement.spacedBy(Spacing.lg),
             ) {
-                HeroCard {
+                HeroCard(backgroundRes = R.drawable.book_energy_background, contentFraction = 0.74f) {
                     Text(timeGreeting(), style = MaterialTheme.typography.bodyLarge, color = TextSecondary)
                     Text(fullName, style = MaterialTheme.typography.headlineLarge, modifier = Modifier.testTag("greeting"))
                     Text("Your sun, your grid, your power.", style = AccentQuoteStyle, color = SolarOrange)

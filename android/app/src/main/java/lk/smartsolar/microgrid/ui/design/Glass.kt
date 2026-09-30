@@ -143,14 +143,48 @@ fun timeGreeting(hour: Int = java.util.Calendar.getInstance().get(java.util.Cale
 @Composable
 fun HeroCard(
     modifier: Modifier = Modifier,
+    /** Optional photo drawn behind the content, anchored to the right so its subject stays visible. */
+    @androidx.annotation.DrawableRes backgroundRes: Int? = null,
+    /** Share of the card width the content may use when a photo is shown; the rest is left to the photo. */
+    contentFraction: Float = 1f,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val shape = Shapes.hero
+    val frame = modifier
+        .fillMaxWidth()
+        .shadow(14.dp, shape, ambientColor = DarkNavy.copy(alpha = 0.05f), spotColor = SunChainBlue.copy(alpha = 0.18f))
+        .clip(shape)
+    if (backgroundRes != null) {
+        Box(frame.border(1.dp, Brush.verticalGradient(listOf(Color.White, Color.White.copy(alpha = 0.4f))), shape)) {
+            androidx.compose.foundation.Image(
+                androidx.compose.ui.res.painterResource(backgroundRes),
+                contentDescription = null,
+                modifier = Modifier.matchParentSize(),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                alignment = Alignment.CenterEnd,
+            )
+            // Light wash on the left only, so the dark text stays readable while the house and sunrise stay clear.
+            Box(
+                Modifier.matchParentSize().background(
+                    Brush.horizontalGradient(
+                        0f to Color.White.copy(alpha = 0.88f),
+                        0.55f to Color.White.copy(alpha = 0.8f),
+                        0.68f to Color.White.copy(alpha = 0.45f),
+                        0.75f to Color.White.copy(alpha = 0.22f),
+                        0.92f to Color.Transparent,
+                    ),
+                ),
+            )
+            Column(
+                Modifier.fillMaxWidth(contentFraction).padding(Spacing.xl),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                content = content,
+            )
+        }
+        return
+    }
     Column(
-        modifier
-            .fillMaxWidth()
-            .shadow(14.dp, shape, ambientColor = DarkNavy.copy(alpha = 0.05f), spotColor = SunChainBlue.copy(alpha = 0.18f))
-            .clip(shape)
+        frame
             .background(Brush.linearGradient(listOf(Color(0xFFE4EDFF), Color(0xFFE7F7EE), Color(0xFFFFF2DC))))
             .drawBehind {
                 val r = size.minDimension * 0.9f

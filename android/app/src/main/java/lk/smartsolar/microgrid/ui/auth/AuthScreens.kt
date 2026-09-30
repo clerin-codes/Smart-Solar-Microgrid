@@ -1,8 +1,10 @@
-package lk.smartsolar.microgrid.ui.auth
+﻿package lk.smartsolar.microgrid.ui.auth
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -35,12 +38,18 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import lk.smartsolar.microgrid.R
 import lk.smartsolar.microgrid.ui.design.ErrorState
 import lk.smartsolar.microgrid.ui.common.Logo
 import lk.smartsolar.microgrid.ui.common.containerViewModel
@@ -54,28 +63,54 @@ import lk.smartsolar.microgrid.ui.theme.SolarOrange
 import lk.smartsolar.microgrid.ui.theme.Spacing
 import lk.smartsolar.microgrid.ui.theme.TextSecondary
 
-/** Centered, scrollable frame shared by sign-in and registration. */
+/** Centered, scrollable frame shared by sign-in and registration. An optional [background] fills the screen behind it. */
 @Composable
-private fun AuthFrame(content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
-    Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            content = content,
-        )
+private fun AuthFrame(
+    @androidx.annotation.DrawableRes background: Int? = null,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
+) {
+    Box(Modifier.fillMaxSize()) {
+        if (background != null) {
+            Image(painterResource(background), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        }
+        Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                content = content,
+            )
+        }
     }
 }
 
-/** Brief branded launch screen: the logo fades and settles into place. */
+/** Brief branded launch screen: a sunrise-over-solar photo with the logo fading and settling into place. */
 @Composable
 fun SplashScreen() {
     val progress = remember { Animatable(0f) }
     LaunchedEffect(Unit) { progress.animateTo(1f, tween(750, easing = FastOutSlowInEasing)) }
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Image(
+            painterResource(R.drawable.splash_background),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+        )
+        // A soft white glow behind the logo keeps the wordmark and tagline readable on the bright sky.
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.radialGradient(
+                    0f to Color.White.copy(alpha = 0.78f),
+                    0.6f to Color.White.copy(alpha = 0.6f),
+                    1f to Color.Transparent,
+                    center = Offset.Unspecified,
+                    radius = 1000f,
+                ),
+            ),
+        )
         Column(
             Modifier.graphicsLayer {
                 alpha = progress.value
@@ -84,7 +119,7 @@ fun SplashScreen() {
             },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Logo(Modifier.widthIn(max = 280.dp).fillMaxWidth(0.72f))
+            Logo(Modifier.size(136.dp))
             Spacer(Modifier.height(Spacing.md))
             Text("Powering tomorrow, together.", style = AccentQuoteStyle, color = SolarOrange)
         }
@@ -99,8 +134,8 @@ fun LoginScreen(onRegister: () -> Unit) {
     var password by rememberSaveable { mutableStateOf("") }
     var submitted by rememberSaveable { mutableStateOf(false) }
 
-    AuthFrame {
-        Logo(Modifier.widthIn(max = 300.dp).fillMaxWidth(0.78f))
+    AuthFrame(background = R.drawable.login_background) {
+        Logo(Modifier.size(104.dp))
         Spacer(Modifier.height(Spacing.xl))
         Text("Welcome back", style = MaterialTheme.typography.headlineLarge, textAlign = TextAlign.Center)
         Text("Every sunrise powers a stronger grid.", style = AccentQuoteStyle, color = SolarOrange, textAlign = TextAlign.Center)
@@ -166,7 +201,7 @@ fun RegisterScreen(onBack: () -> Unit) {
 
     AuthFrame {
         Spacer(Modifier.height(Spacing.lg))
-        Logo(Modifier.widthIn(max = 240.dp).fillMaxWidth(0.62f))
+        Logo(Modifier.size(88.dp))
         Spacer(Modifier.height(Spacing.lg))
         Text("Create your prosumer account", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
         Text("Join the network and trade clean energy.", style = AccentQuoteStyle, color = SolarOrange, textAlign = TextAlign.Center)

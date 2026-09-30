@@ -11,6 +11,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Dashboard
+import androidx.compose.material.icons.outlined.FactCheck
 import androidx.compose.material.icons.outlined.EventAvailable
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
@@ -19,6 +20,7 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material.icons.outlined.Receipt
 import androidx.compose.material.icons.rounded.Dashboard
+import androidx.compose.material.icons.rounded.FactCheck
 import androidx.compose.material.icons.rounded.EventAvailable
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Home
@@ -65,6 +67,7 @@ import lk.smartsolar.microgrid.ui.auth.RegisterScreen
 import lk.smartsolar.microgrid.ui.common.LocalContainer
 import lk.smartsolar.microgrid.ui.common.LocalSnackbar
 import lk.smartsolar.microgrid.ui.common.ReservationDetailScreen
+import lk.smartsolar.microgrid.ui.operator.OperatorApprovalsScreen
 import lk.smartsolar.microgrid.ui.operator.OperatorDashboardScreen
 import lk.smartsolar.microgrid.ui.operator.OperatorTransactionsScreen
 import lk.smartsolar.microgrid.ui.operator.ScannerScreen
@@ -87,6 +90,7 @@ private object Routes {
     const val DASHBOARD = "dashboard"
     const val SCANNER = "scanner"
     const val TRANSACTIONS = "transactions"
+    const val APPROVALS = "approvals"
     const val STATION = "station/{id}"
     const val BOOK = "book?stationId={stationId}&slotId={slotId}"
     const val EDIT = "edit/{id}"
@@ -108,6 +112,7 @@ private val ProsumerTabs = listOf(
 
 private val OperatorTabs = listOf(
     NavItem(Routes.DASHBOARD, "Dashboard", Icons.Outlined.Dashboard, Icons.Rounded.Dashboard, iconRes = R.drawable.home_app_logo_24),
+    NavItem(Routes.APPROVALS, "Approvals", Icons.Outlined.FactCheck, Icons.Rounded.FactCheck),
     NavItem(Routes.SCANNER, "Scan", Icons.Outlined.QrCodeScanner, Icons.Rounded.QrCodeScanner),
     NavItem(Routes.TRANSACTIONS, "Transactions", Icons.Outlined.Receipt, Icons.Rounded.Receipt),
     NavItem(Routes.PROFILE, "Profile", Icons.Outlined.Person, Icons.Rounded.Person),
@@ -196,7 +201,15 @@ private fun MainNav(session: Session) {
                 composable(Routes.HISTORY) { TransactionHistoryScreen(onOpen = { nav.navigate(Routes.reservation(it)) }) }
 
                 // Grid operator tabs
-                composable(Routes.DASHBOARD) { OperatorDashboardScreen(onScan = { nav.goToTab(Routes.SCANNER) }, onOpen = { nav.navigate(Routes.reservation(it)) }) }
+                composable(Routes.DASHBOARD) {
+                    OperatorDashboardScreen(
+                        onScan = { nav.goToTab(Routes.SCANNER) },
+                        onOpen = { nav.navigate(Routes.reservation(it)) },
+                        onProfile = { nav.goToTab(Routes.PROFILE) },
+                        onSeeMore = { nav.goToTab(Routes.APPROVALS) },
+                    )
+                }
+                composable(Routes.APPROVALS) { OperatorApprovalsScreen(onOpen = { nav.navigate(Routes.reservation(it)) }) }
                 composable(Routes.SCANNER) { ScannerScreen(onOpenReceipt = { nav.navigate(Routes.reservation(it)) }) }
                 composable(Routes.TRANSACTIONS) { OperatorTransactionsScreen(onOpen = { nav.navigate(Routes.reservation(it)) }) }
 

@@ -69,7 +69,7 @@ fun SunChainTopBar(title: String, onBack: (() -> Unit)? = null) = ScreenHeader(t
 
 @Composable
 fun Logo(modifier: Modifier = Modifier) {
-    Image(painterResource(R.drawable.sunchain_logo), contentDescription = "SunChain", modifier = modifier, contentScale = ContentScale.Fit)
+    Image(painterResource(R.drawable.sunchain_app_logo), contentDescription = "SunChain", modifier = modifier, contentScale = ContentScale.Fit)
 }
 
 @Composable

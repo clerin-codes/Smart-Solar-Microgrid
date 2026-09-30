@@ -1,20 +1,8 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <!-- Sun -->
-    <path
-        android:fillColor="#F59E0B"
-        android:pathData="M50,58m-22,0a22,22 0,1 1,44 0a22,22 0,1 1,-44 0" />
-    <!-- Leaf -->
-    <path
-        android:fillColor="#22C55E"
-        android:pathData="M56,52C56,34 68,26 84,26C84,44 76,58 56,52z" />
-    <!-- Chain swoosh -->
-    <path
-        android:pathData="M28,74C40,72 52,66 62,50"
-        android:strokeWidth="5"
-        android:strokeColor="#1D4ED8"
-        android:strokeLineCap="round" />
-</vector>
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive-icon foreground: the circular SunChain logo inside the 66dp safe zone of the 108dp canvas. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/sunchain_app_logo"
+    android:insetLeft="20dp"
+    android:insetTop="20dp"
+    android:insetRight="20dp"
+    android:insetBottom="20dp" />
