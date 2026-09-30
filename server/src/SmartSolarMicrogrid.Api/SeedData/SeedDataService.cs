@@ -67,6 +67,9 @@ public class SeedDataService
 
                 IsActive = true,
 
+                Status =
+                    AccountStatus.Active,
+
                 CreatedAt =
                     DateTime.UtcNow,
 
@@ -115,6 +118,9 @@ public class SeedDataService
 
                 IsActive = true,
 
+                Status =
+                    AccountStatus.Active,
+
                 CreatedAt =
                     DateTime.UtcNow,
 
@@ -162,6 +168,9 @@ public class SeedDataService
                     UserRole.Prosumer,
 
                 IsActive = true,
+
+                Status =
+                    AccountStatus.Active,
 
                 CreatedAt =
                     DateTime.UtcNow,

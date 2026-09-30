@@ -1,19 +1,29 @@
 /*
  * Smart Solar Microgrid Trading System
  * Member 1 - Authentication and Accounts
- * File: UpdateUserDto.cs
- * Purpose: Validates safe editable user profile information.
+ * File: RegisterProsumerDto.cs
+ * Purpose: Validates Solar Prosumer self-registration requests.
  */
 
 using System.ComponentModel.DataAnnotations;
 
-namespace SmartSolarMicrogrid.Api.DTOs.Users;
+using SmartSolarMicrogrid.Api.Validation;
 
-public class UpdateUserDto
+namespace SmartSolarMicrogrid.Api.DTOs.Auth;
+
+public class RegisterProsumerDto
 {
     [Required(
+        ErrorMessage = "NIC is required.")]
+    [RegularExpression(
+        @"^(?:\d{12}|\d{9}[vVxX])$",
         ErrorMessage =
-            "Full name is required.")]
+            "Enter a valid Sri Lankan NIC. Use either 12 digits or the old 9-digit format followed by V/X.")]
+    public string NIC { get; set; } =
+        string.Empty;
+
+    [Required(
+        ErrorMessage = "Full name is required.")]
     [StringLength(
         100,
         MinimumLength = 2,
@@ -27,8 +37,7 @@ public class UpdateUserDto
         string.Empty;
 
     [Required(
-        ErrorMessage =
-            "Email address is required.")]
+        ErrorMessage = "Email address is required.")]
     [EmailAddress(
         ErrorMessage =
             "Enter a valid email address.")]
@@ -47,5 +56,11 @@ public class UpdateUserDto
         ErrorMessage =
             "Enter a valid Sri Lankan mobile number, for example 0771234567 or +94771234567.")]
     public string PhoneNumber { get; set; } =
+        string.Empty;
+
+    [Required(
+        ErrorMessage = "Password is required.")]
+    [StrongPassword]
+    public string Password { get; set; } =
         string.Empty;
 }
