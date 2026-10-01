@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   getReservationById,
@@ -100,7 +100,7 @@ function ReservationDetails() {
   // Load Reservation
   // =====================================================
 
-  const loadReservation = async () => {
+  const loadReservation = useCallback(async () => {
     try {
       setLoading(true)
       setError('')
@@ -120,7 +120,7 @@ function ReservationDetails() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [id])
 
   // =====================================================
   // Initial Load
@@ -130,7 +130,7 @@ function ReservationDetails() {
     if (id) {
       loadReservation()
     }
-  }, [id])
+  }, [id, loadReservation])
 
   // =====================================================
   // Approve Reservation

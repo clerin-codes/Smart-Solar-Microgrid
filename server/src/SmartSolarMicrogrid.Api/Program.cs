@@ -561,17 +561,25 @@ using (var scope =
 // 14. Seed Database
 // ======================================================
 
-using (var scope =
-       app.Services.CreateScope())
-{
-    // Resolve and execute development seed data.
-    var seedDataService =
-        scope.ServiceProvider
-            .GetRequiredService<
-                SeedDataService>();
+var seedDataEnabled =
+    app.Environment.IsDevelopment() ||
+    app.Configuration.GetValue<bool>(
+        "SeedData:Enabled");
 
-    await seedDataService
-        .SeedAsync();
+if (seedDataEnabled)
+{
+    using (var scope =
+           app.Services.CreateScope())
+    {
+        // Resolve and execute development seed data.
+        var seedDataService =
+            scope.ServiceProvider
+                .GetRequiredService<
+                    SeedDataService>();
+
+        await seedDataService
+            .SeedAsync();
+    }
 }
 
 // ======================================================

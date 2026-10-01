@@ -1,4 +1,5 @@
 import {
+    useCallback,
     useEffect,
     useMemo,
     useState,
@@ -89,7 +90,7 @@ function Slots() {
         loadData()
     }, [])
 
-    const reloadSlots = async () => {
+    const reloadSlots = useCallback(async () => {
         try {
             let data = []
             if (stationFilter !== 'all') {
@@ -103,11 +104,11 @@ function Slots() {
         } catch (err) {
             console.error('Failed to reload slots:', err)
         }
-    }
+    }, [stationFilter])
 
     useEffect(() => {
         reloadSlots()
-    }, [stationFilter])
+    }, [reloadSlots])
 
     // =====================================================
     // Search + Filter

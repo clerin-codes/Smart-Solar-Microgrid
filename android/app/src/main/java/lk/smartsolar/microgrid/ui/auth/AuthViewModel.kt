@@ -6,9 +6,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import lk.smartsolar.microgrid.data.local.SessionStore
 import lk.smartsolar.microgrid.data.remote.AppException
 import lk.smartsolar.microgrid.data.repo.AuthRepository
 import lk.smartsolar.microgrid.data.repo.SyncManager
+import java.net.URI
 
 data class AuthUiState(val busy: Boolean = false, val error: String? = null)
 
@@ -26,10 +28,41 @@ object AuthValidation {
 class AuthViewModel(
     private val auth: AuthRepository,
     private val sync: SyncManager,
+    private val session: SessionStore,
 ) : ViewModel() {
     private val _state = MutableStateFlow(AuthUiState())
     val state: StateFlow<AuthUiState> = _state
+    val baseUrl: StateFlow<String> = session.baseUrl
     fun clearError() = _state.update { it.copy(error = null) }
+
+    /** Validates, normalises, and persists the API root entered on the sign-in screen. */
+    fun configureServer(value: String): String? {
+        val entered = value.trim()
+        if (entered.isEmpty()) return "Server URL is required."
+
+        val withScheme = if (entered.startsWith("http://", true) || entered.startsWith("https://", true)) {
+            entered
+        } else {
+            "http://$entered"
+        }
+
+        val uri = runCatching { URI(withScheme) }.getOrNull()
+            ?: return "Enter a valid server URL."
+        if (uri.scheme !in setOf("http", "https") || uri.host.isNullOrBlank()) {
+            return "Use an HTTP or HTTPS server address."
+        }
+
+        var path = uri.path.orEmpty().trimEnd('/')
+        if (path.isEmpty()) path = "/api"
+        else if (!path.endsWith("/api", ignoreCase = true)) path += "/api"
+
+        val normalised = runCatching {
+            URI(uri.scheme.lowercase(), uri.userInfo, uri.host, uri.port, "$path/", null, null).toString()
+        }.getOrNull() ?: return "Enter a valid server URL."
+
+        session.setBaseUrl(normalised)
+        return null
+    }
 
     fun login(nic: String, password: String) = run { auth.login(nic, password) }
 

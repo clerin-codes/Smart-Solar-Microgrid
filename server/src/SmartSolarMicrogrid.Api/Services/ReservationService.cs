@@ -626,25 +626,14 @@ public class ReservationService : IReservationService
         }
 
         // =====================================================
-        // COMPLETED RESERVATION CANNOT BE CANCELLED
+        // ONLY ACTIVE RESERVATIONS CAN BE CANCELLED
         // =====================================================
 
-        if (reservation.Status ==
-            ReservationStatus.Completed)
+        if (reservation.Status != ReservationStatus.Pending &&
+            reservation.Status != ReservationStatus.Approved)
         {
             throw new InvalidOperationException(
-                "Completed reservations cannot be cancelled.");
-        }
-
-        // =====================================================
-        // ALREADY CANCELLED
-        // =====================================================
-
-        if (reservation.Status ==
-            ReservationStatus.Cancelled)
-        {
-            throw new InvalidOperationException(
-                "Reservation is already cancelled.");
+                "Only pending or approved reservations can be cancelled.");
         }
 
         // =====================================================

@@ -89,6 +89,7 @@ public class ReservationsController : ControllerBase
     // inside the service layer.
 
     [HttpGet("{id}")]
+    [Authorize(Roles = "Prosumer,GridOperator")]
     public async Task<IActionResult> GetById(
         string id)
     {
@@ -103,6 +104,12 @@ public class ReservationsController : ControllerBase
             {
                 message = "Reservation not found."
             });
+        }
+
+        if (User.IsInRole("Prosumer") &&
+            reservation.ProsumerNIC != GetCurrentUserNIC())
+        {
+            return Forbid();
         }
 
         return Ok(reservation);

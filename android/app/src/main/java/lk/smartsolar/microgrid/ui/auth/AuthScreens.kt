@@ -22,6 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Badge
+import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Person
@@ -128,11 +129,15 @@ fun SplashScreen() {
 
 @Composable
 fun LoginScreen(onRegister: () -> Unit) {
-    val vm = containerViewModel { AuthViewModel(it.auth, it.sync) }
+    val vm = containerViewModel { AuthViewModel(it.auth, it.sync, it.session) }
     val state by vm.state.collectAsState()
+    val configuredServer by vm.baseUrl.collectAsState()
     var nic by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var submitted by rememberSaveable { mutableStateOf(false) }
+    var serverUrl by rememberSaveable { mutableStateOf(configuredServer) }
+    var serverError by rememberSaveable { mutableStateOf<String?>(null) }
+    var serverSaved by rememberSaveable { mutableStateOf(false) }
 
     AuthFrame(background = R.drawable.login_background) {
         Logo(Modifier.size(104.dp))
@@ -169,6 +174,52 @@ fun LoginScreen(onRegister: () -> Unit) {
         }
         Spacer(Modifier.height(Spacing.md))
         SunChainButton("Create a prosumer account", onRegister, Modifier.testTag("go_register"), kind = ButtonKind.Ghost)
+        Spacer(Modifier.height(Spacing.md))
+        GlassCard(
+            Modifier.widthIn(max = 480.dp).testTag("server_settings"),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            Text("Connect server", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Enter the backend API address before signing in. The app saves it on this device.",
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary,
+            )
+            SunChainTextField(
+                serverUrl,
+                {
+                    serverUrl = it
+                    serverError = null
+                    serverSaved = false
+                },
+                "Server URL",
+                Modifier.testTag("server_url"),
+                error = serverError,
+                keyboardType = KeyboardType.Uri,
+                imeAction = ImeAction.Done,
+                leadingIcon = Icons.Rounded.Cloud,
+                placeholder = "http://10.0.2.2:9339/api/",
+            )
+            Text(
+                "Emulator: 10.0.2.2:9339  •  Phone: your computer's Wi-Fi IP:9339",
+                style = MaterialTheme.typography.labelSmall,
+                color = TextSecondary,
+            )
+            if (serverSaved) {
+                Text("Server configured successfully.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+            }
+            SunChainButton(
+                "Save server",
+                onClick = {
+                    serverError = vm.configureServer(serverUrl)
+                    serverSaved = serverError == null
+                    if (serverSaved) serverUrl = vm.baseUrl.value
+                },
+                modifier = Modifier.fillMaxWidth().testTag("save_server"),
+                kind = ButtonKind.Secondary,
+            )
+        }
         Spacer(Modifier.height(Spacing.lg))
         Text(
             "Decentralized Solar Energy Trading Platform",
@@ -179,7 +230,7 @@ fun LoginScreen(onRegister: () -> Unit) {
 
 @Composable
 fun RegisterScreen(onBack: () -> Unit) {
-    val vm = containerViewModel { AuthViewModel(it.auth, it.sync) }
+    val vm = containerViewModel { AuthViewModel(it.auth, it.sync, it.session) }
     val state by vm.state.collectAsState()
     var nic by rememberSaveable { mutableStateOf("") }
     var name by rememberSaveable { mutableStateOf("") }

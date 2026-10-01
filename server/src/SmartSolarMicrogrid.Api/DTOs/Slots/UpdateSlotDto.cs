@@ -5,6 +5,8 @@
  * Author: Sithmi - IT23241114
  */
 
+using System.ComponentModel.DataAnnotations;
+
 namespace SmartSolarMicrogrid.Api.DTOs.Slots;
 
 public class UpdateSlotDto
@@ -15,7 +17,9 @@ public class UpdateSlotDto
 
     public TimeSpan EndTime { get; set; }
 
+    [Range(0.01, double.MaxValue)]
     public double CapacityKw { get; set; }
 
+    [Range(0, double.MaxValue)]
     public double AvailableCapacityKw { get; set; }
 }

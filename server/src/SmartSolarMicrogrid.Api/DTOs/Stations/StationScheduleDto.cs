@@ -9,6 +9,7 @@ namespace SmartSolarMicrogrid.Api.DTOs.Stations
 {
     public class StationScheduleDto
     {
+        [System.ComponentModel.DataAnnotations.Required]
         public string Day { get; set; } = string.Empty; // e.g., "Monday"
         public TimeSpan OpeningTime { get; set; }
         public TimeSpan ClosingTime { get; set; }
