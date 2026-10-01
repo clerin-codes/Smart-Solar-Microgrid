@@ -27,8 +27,10 @@ import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Phone
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -137,7 +139,7 @@ fun LoginScreen(onRegister: () -> Unit) {
     var submitted by rememberSaveable { mutableStateOf(false) }
     var serverUrl by rememberSaveable { mutableStateOf(configuredServer) }
     var serverError by rememberSaveable { mutableStateOf<String?>(null) }
-    var serverSaved by rememberSaveable { mutableStateOf(false) }
+    var showServerDialog by rememberSaveable { mutableStateOf(false) }
 
     AuthFrame(background = R.drawable.login_background) {
         Logo(Modifier.size(104.dp))
@@ -174,56 +176,71 @@ fun LoginScreen(onRegister: () -> Unit) {
         }
         Spacer(Modifier.height(Spacing.md))
         SunChainButton("Create a prosumer account", onRegister, Modifier.testTag("go_register"), kind = ButtonKind.Ghost)
-        Spacer(Modifier.height(Spacing.md))
-        GlassCard(
-            Modifier.widthIn(max = 480.dp).testTag("server_settings"),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        TextButton(
+            onClick = {
+                serverUrl = configuredServer
+                serverError = null
+                showServerDialog = true
+            },
+            modifier = Modifier.testTag("open_server_settings"),
         ) {
-            Text("Connect server", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "Enter the backend API address before signing in. The app saves it on this device.",
-                style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary,
-            )
-            SunChainTextField(
-                serverUrl,
-                {
-                    serverUrl = it
-                    serverError = null
-                    serverSaved = false
-                },
-                "Server URL",
-                Modifier.testTag("server_url"),
-                error = serverError,
-                keyboardType = KeyboardType.Uri,
-                imeAction = ImeAction.Done,
-                leadingIcon = Icons.Rounded.Cloud,
-                placeholder = "http://10.0.2.2:9339/api/",
-            )
-            Text(
-                "Emulator: 10.0.2.2:9339  •  Phone: your computer's Wi-Fi IP:9339",
-                style = MaterialTheme.typography.labelSmall,
-                color = TextSecondary,
-            )
-            if (serverSaved) {
-                Text("Server configured successfully.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-            }
-            SunChainButton(
-                "Save server",
-                onClick = {
-                    serverError = vm.configureServer(serverUrl)
-                    serverSaved = serverError == null
-                    if (serverSaved) serverUrl = vm.baseUrl.value
-                },
-                modifier = Modifier.fillMaxWidth().testTag("save_server"),
-                kind = ButtonKind.Secondary,
-            )
+            Text("Connect server", style = MaterialTheme.typography.labelMedium)
         }
         Spacer(Modifier.height(Spacing.lg))
         Text(
             "Decentralized Solar Energy Trading Platform",
             style = MaterialTheme.typography.labelSmall, color = TextSecondary, textAlign = TextAlign.Center,
+        )
+    }
+
+    if (showServerDialog) {
+        AlertDialog(
+            onDismissRequest = { showServerDialog = false },
+            modifier = Modifier.testTag("server_settings_dialog"),
+            icon = { androidx.compose.material3.Icon(Icons.Rounded.Cloud, contentDescription = null) },
+            title = { Text("Connect server") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    Text(
+                        "Enter the backend API address. It will be saved on this device.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    SunChainTextField(
+                        serverUrl,
+                        {
+                            serverUrl = it
+                            serverError = null
+                        },
+                        "Server URL",
+                        Modifier.testTag("server_url"),
+                        error = serverError,
+                        keyboardType = KeyboardType.Uri,
+                        imeAction = ImeAction.Done,
+                        leadingIcon = Icons.Rounded.Cloud,
+                        placeholder = "http://10.0.2.2:9339/api/",
+                    )
+                    Text(
+                        "Emulator: 10.0.2.2:9339\nPhone: your computer's Wi-Fi IP:9339",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        serverError = vm.configureServer(serverUrl)
+                        if (serverError == null) {
+                            serverUrl = vm.baseUrl.value
+                            showServerDialog = false
+                        }
+                    },
+                    modifier = Modifier.testTag("save_server"),
+                ) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showServerDialog = false }) { Text("Cancel") }
+            },
         )
     }
 }
