@@ -1,4 +1,5 @@
 import {
+    useCallback,
     useEffect,
     useMemo,
     useState,
@@ -12,6 +13,9 @@ import {
 } from '../../services/api/stationService'
 
 import StationForm from './StationForm'
+import InfoBanner from '../../components/common/InfoBanner'
+import Pagination from '../../components/common/Pagination'
+import useAutoRefresh from '../../hooks/useAutoRefresh'
 
 function Stations() {
     const [stations, setStations] = useState([])
@@ -28,38 +32,49 @@ function Stations() {
 
     // Deactivate confirmation
     const [confirmId, setConfirmId] = useState(null)
+    const [page, setPage] = useState(1)
+    const [pageSize, setPageSize] = useState(10)
 
     // =====================================================
     // Load Stations
     // =====================================================
 
-    const loadStations = async () => {
+    const loadStations = useCallback(async (silent = false) => {
         try {
-            setLoading(true)
-            setError('')
+            if (!silent) {
+                setLoading(true)
+                setError('')
+            }
 
             const data = await getAllStations()
 
             setStations(
                 Array.isArray(data) ? data : []
             )
+            setError('')
         } catch (err) {
             console.error(
                 'Failed to load stations:',
                 err
             )
 
-            setError(
-                'Unable to load stations. Please check the server connection.'
-            )
+            if (!silent) {
+                setError(
+                    'Unable to load stations. Please check the server connection.'
+                )
+            }
         } finally {
-            setLoading(false)
+            if (!silent) setLoading(false)
         }
-    }
+    }, [])
 
     useEffect(() => {
         loadStations()
-    }, [])
+    }, [loadStations])
+
+    useAutoRefresh(() => loadStations(true), {
+        enabled: !showForm && !confirmId,
+    })
 
     // =====================================================
     // Search + Filter
@@ -90,8 +105,10 @@ function Stations() {
                     !station.isActive)
 
             return matchesSearch && matchesStatus
-        })
+        }).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
     }, [stations, search, statusFilter])
+    const currentPage = Math.min(page, Math.max(1, Math.ceil(filteredStations.length / pageSize)))
+    const pagedStations = filteredStations.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
     // =====================================================
     // Summary Counts
@@ -203,6 +220,8 @@ function Stations() {
                 </button>
             </div>
 
+            <InfoBanner>Set the station location, capacity, storage slots, and weekly availability before creating energy slots. A station with active reservations cannot be deactivated.</InfoBanner>
+
             {/* =================================================
           Summary Cards
       ================================================= */}
@@ -267,9 +286,10 @@ function Stations() {
                         <input
                             type="text"
                             value={search}
-                            onChange={(e) =>
+                            onChange={(e) => {
                                 setSearch(e.target.value)
-                            }
+                                setPage(1)
+                            }}
                             placeholder="Search by station code or name..."
                             className="w-full px-4 py-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
@@ -278,9 +298,10 @@ function Stations() {
                     {/* Status Filter */}
                     <select
                         value={statusFilter}
-                        onChange={(e) =>
+                        onChange={(e) => {
                             setStatusFilter(e.target.value)
-                        }
+                            setPage(1)
+                        }}
                         className="px-4 py-2.5 border border-slate-300 rounded-lg outline-none bg-white text-slate-700 focus:ring-2 focus:ring-blue-500"
                     >
                         <option value="all">
@@ -437,7 +458,7 @@ function Stations() {
                                 {/* Table Body */}
                                 <tbody className="divide-y divide-slate-100">
 
-                                    {filteredStations.map(
+                                    {pagedStations.map(
                                         (station) => (
                                             <tr
                                                 key={station.id}
@@ -535,6 +556,7 @@ function Stations() {
                                 </tbody>
                             </table>
                         </div>
+                        <Pagination page={currentPage} pageSize={pageSize} totalItems={filteredStations.length} onPageChange={setPage} onPageSizeChange={(size) => { setPageSize(size); setPage(1) }} />
                     </div>
                 )}
 

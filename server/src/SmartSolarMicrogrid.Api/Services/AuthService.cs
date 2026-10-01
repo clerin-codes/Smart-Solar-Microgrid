@@ -1,6 +1,6 @@
 /*
  * Smart Solar Microgrid Trading System
- * Member 1 - Authentication and Accounts
+ * Author: Shakanyah - IT23214002
  * File: AuthService.cs
  * Purpose: Validates account credentials and generates secure,
  *          role-based JWT access tokens.
@@ -30,6 +30,7 @@ public class AuthService : IAuthService
         IUserRepository userRepository,
         JwtSettings jwtSettings)
     {
+        // Responsible: Shakanyah - IT23214002
         // Store authentication dependencies.
         _userRepository =
             userRepository;
@@ -41,6 +42,7 @@ public class AuthService : IAuthService
     public async Task<LoginResponseDto> LoginAsync(
         LoginRequestDto request)
     {
+        // Responsible: Shakanyah - IT23214002
         // Normalize the NIC before querying MongoDB.
         var nic =
             request.NIC
@@ -131,6 +133,8 @@ public class AuthService : IAuthService
     public async Task<LoginResponseDto> RegisterAsync(
         RegisterRequestDto request)
     {
+        // Responsible: Shakanyah - IT23214002
+        // Validate and create a new account before issuing a JWT.
         var nic = (request.NIC?.Trim() ?? string.Empty).ToUpperInvariant();
         var fullName = request.FullName?.Trim() ?? string.Empty;
         var email = request.Email?.Trim() ?? string.Empty;
@@ -213,6 +217,8 @@ public class AuthService : IAuthService
     public async Task<ProfileResponseDto> GetProfileAsync(
         string nic)
     {
+        // Responsible: Shakanyah - IT23214002
+        // Load the active user's profile by NIC.
         var user = await _userRepository.GetByNICAsync(nic);
 
         if (user == null)
@@ -227,6 +233,8 @@ public class AuthService : IAuthService
         string nic,
         UpdateProfileRequestDto request)
     {
+        // Responsible: Shakanyah - IT23214002
+        // Validate and persist editable profile fields for the user.
         var user = await _userRepository.GetByNICAsync(nic);
 
         if (user == null)
@@ -272,6 +280,8 @@ public class AuthService : IAuthService
         string nic,
         UpdateProfileImageRequestDto request)
     {
+        // Responsible: Shakanyah - IT23214002
+        // Validate and persist a replacement profile image.
         var user = await _userRepository.GetByNICAsync(nic);
 
         if (user == null)
@@ -290,6 +300,8 @@ public class AuthService : IAuthService
     public async Task<ProfileResponseDto> RemoveProfileImageAsync(
         string nic)
     {
+        // Responsible: Shakanyah - IT23214002
+        // Remove the stored profile image from the user's account.
         var user = await _userRepository.GetByNICAsync(nic);
 
         if (user == null)
@@ -308,6 +320,8 @@ public class AuthService : IAuthService
     /// <summary>Checks the base64 is a real, reasonably small JPEG/PNG/WebP and returns it without any data: prefix.</summary>
     private static string NormaliseProfileImage(string? input)
     {
+        // Responsible: Shakanyah - IT23214002
+        // Normalize and validate an uploaded base64 image payload.
         var text = input?.Trim() ?? string.Empty;
 
         var comma = text.IndexOf(',');
@@ -363,6 +377,8 @@ public class AuthService : IAuthService
 
     private static void ValidateEmail(string email)
     {
+        // Responsible: Shakanyah - IT23214002
+        // Reject email addresses that do not match the accepted format.
         if (!EmailPattern.IsMatch(email))
         {
             throw new ArgumentException(
@@ -372,6 +388,8 @@ public class AuthService : IAuthService
 
     private static void ValidatePhone(string phone)
     {
+        // Responsible: Shakanyah - IT23214002
+        // Reject phone numbers that do not match the accepted format.
         if (!PhonePattern.IsMatch(phone))
         {
             throw new ArgumentException(
@@ -381,6 +399,8 @@ public class AuthService : IAuthService
 
     private static ProfileResponseDto ToProfile(UserDetails user)
     {
+        // Responsible: Shakanyah - IT23214002
+        // Map a stored user document to the public profile contract.
         return new ProfileResponseDto
         {
             NIC = user.NIC,
@@ -397,6 +417,7 @@ public class AuthService : IAuthService
         UserDetails user,
         DateTime expiresAtUtc)
     {
+        // Responsible: Shakanyah - IT23214002
         // Create standard identity, role and token-identifier claims.
         var claims =
             new List<Claim>

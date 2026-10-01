@@ -11,6 +11,8 @@ data class LoginRequest(val nic: String, val password: String)
 
 data class AuthResponse(val token: String, val nic: String, val fullName: String, val role: String)
 
+data class RegistrationResponse(val message: String)
+
 data class RegisterRequest(
     val nic: String,
     val fullName: String,
@@ -90,14 +92,23 @@ data class UpdateReservationRequest(val slotId: String, val reservationDate: Str
 
 data class MessageResponse(val message: String?)
 
-data class ErrorBody(val statusCode: Int?, val message: String?)
+data class ErrorBody(
+    val statusCode: Int?,
+    val message: String?,
+    val errors: Map<String, List<String>>? = null,
+)
+
+data class HealthResponse(val status: String?, val database: String?)
 
 interface ApiService {
+    @GET("health")
+    suspend fun health(): HealthResponse
+
     @POST("auth/login")
     suspend fun login(@Body body: LoginRequest): AuthResponse
 
-    @POST("auth/register")
-    suspend fun register(@Body body: RegisterRequest): AuthResponse
+    @POST("auth/register-prosumer")
+    suspend fun register(@Body body: RegisterRequest): RegistrationResponse
 
     @GET("auth/profile")
     suspend fun profile(): ProfileDto
@@ -137,6 +148,9 @@ interface ApiService {
 
     @POST("reservations/{id}/approve")
     suspend fun approve(@Path("id") id: String): ReservationDto
+
+    @POST("reservations/{id}/reject")
+    suspend fun reject(@Path("id") id: String): ReservationDto
 
     // The endpoint reads a bare JSON string from the body.
     @POST("reservations/verify-qr")

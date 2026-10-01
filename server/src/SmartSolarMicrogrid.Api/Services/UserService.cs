@@ -1,6 +1,6 @@
 /*
  * Smart Solar Microgrid Trading System
- * Member 1 - Authentication and Accounts
+ * Author: Shakanyah - IT23214002
  * File: UserService.cs
  * Purpose: Implements registration, profile management,
  *          activation, deactivation, validation and
@@ -24,6 +24,7 @@ public class UserService : IUserService
     public UserService(
         IUserRepository userRepository)
     {
+        // Responsible: Shakanyah - IT23214002
         // Store the account repository dependency.
         _userRepository = userRepository;
     }
@@ -32,6 +33,7 @@ public class UserService : IUserService
         UserRole? role = null,
         AccountStatus? status = null)
     {
+        // Responsible: Shakanyah - IT23214002
         // Apply role/status filters directly in MongoDB.
         var users =
             await _userRepository.GetFilteredAsync(
@@ -46,6 +48,7 @@ public class UserService : IUserService
     public async Task<List<UserResponseDto>>
         GetPendingActivationsAsync()
     {
+        // Responsible: Shakanyah - IT23214002
         // Retrieve registrations waiting for Backoffice approval.
         var users =
             await _userRepository.GetByStatusAsync(
@@ -59,6 +62,7 @@ public class UserService : IUserService
     public async Task<List<UserResponseDto>>
         GetDeactivationRequestsAsync()
     {
+        // Responsible: Shakanyah - IT23214002
         // Retrieve Prosumer deactivation requests.
         var users =
             await _userRepository.GetByStatusAsync(
@@ -72,6 +76,7 @@ public class UserService : IUserService
     public async Task<UserResponseDto> GetByNICAsync(
         string nic)
     {
+        // Responsible: Shakanyah - IT23214002
         // Retrieve an account using its normalized NIC.
         var normalizedNic =
             NormalizeNic(nic);
@@ -92,6 +97,7 @@ public class UserService : IUserService
     public async Task<UserResponseDto> CreateAsync(
         CreateUserDto request)
     {
+        // Responsible: Shakanyah - IT23214002
         // Defend against a missing role even if model validation is bypassed.
         if (!request.Role.HasValue)
         {
@@ -179,6 +185,7 @@ public class UserService : IUserService
         RegisterProsumerAsync(
             RegisterProsumerDto request)
     {
+        // Responsible: Shakanyah - IT23214002
         // Register public mobile users strictly as pending Prosumers.
         var nic =
             NormalizeNic(
@@ -249,6 +256,7 @@ public class UserService : IUserService
         string nic,
         UpdateUserDto request)
     {
+        // Responsible: Shakanyah - IT23214002
         // Update only safe editable profile fields.
         var normalizedNic =
             NormalizeNic(nic);
@@ -298,6 +306,7 @@ public class UserService : IUserService
         RequestOwnDeactivationAsync(
             string nic)
     {
+        // Responsible: Shakanyah - IT23214002
         // Place only an active Prosumer into the deactivation-request state.
         var normalizedNic =
             NormalizeNic(nic);
@@ -346,6 +355,7 @@ public class UserService : IUserService
     public async Task<UserResponseDto> ActivateAsync(
         string nic)
     {
+        // Responsible: Shakanyah - IT23214002
         // Approve only a pending Prosumer registration.
         var normalizedNic =
             NormalizeNic(nic);
@@ -389,6 +399,7 @@ public class UserService : IUserService
     public async Task<UserResponseDto> DeactivateAsync(
         string nic)
     {
+        // Responsible: Shakanyah - IT23214002
         // Finalize deactivation through Backoffice.
         var normalizedNic =
             NormalizeNic(nic);
@@ -431,6 +442,7 @@ public class UserService : IUserService
     public async Task<UserResponseDto> ReactivateAsync(
         string nic)
     {
+        // Responsible: Shakanyah - IT23214002
         // Restore only an account whose deactivation was finalized.
         // Pending registrations must use ActivateAsync instead.
         var normalizedNic =
@@ -474,6 +486,7 @@ public class UserService : IUserService
     private async Task EnsureNicAvailableAsync(
         string nic)
     {
+        // Responsible: Shakanyah - IT23214002
         // NIC is the immutable MongoDB primary identifier.
         var existing =
             await _userRepository.GetByNICAsync(
@@ -490,6 +503,7 @@ public class UserService : IUserService
         string email,
         string? excludeNic = null)
     {
+        // Responsible: Shakanyah - IT23214002
         // Prevent multiple accounts from sharing one normalized e-mail.
         var exists =
             await _userRepository.EmailExistsAsync(
@@ -506,6 +520,7 @@ public class UserService : IUserService
     private static string NormalizeNic(
         string nic)
     {
+        // Responsible: Shakanyah - IT23214002
         // Normalize the legacy V/X suffix while preserving the NIC value.
         return nic
             .Trim()
@@ -515,6 +530,7 @@ public class UserService : IUserService
     private static string NormalizeFullName(
         string fullName)
     {
+        // Responsible: Shakanyah - IT23214002
         // Collapse accidental repeated spaces before persistence.
         return string.Join(
             ' ',
@@ -528,6 +544,7 @@ public class UserService : IUserService
     private static string NormalizeEmail(
         string email)
     {
+        // Responsible: Shakanyah - IT23214002
         // Store e-mail addresses in one comparison-friendly form.
         return email
             .Trim()
@@ -537,6 +554,7 @@ public class UserService : IUserService
     private static string NormalizePhoneNumber(
         string phoneNumber)
     {
+        // Responsible: Shakanyah - IT23214002
         // Store +9477... and 077... inputs consistently as 07XXXXXXXX.
         var normalized =
             phoneNumber.Trim();
@@ -555,6 +573,7 @@ public class UserService : IUserService
     private static UserResponseDto MapToResponse(
         UserDetails user)
     {
+        // Responsible: Shakanyah - IT23214002
         // Return only safe account properties; PasswordHash never leaves the API.
         return new UserResponseDto
         {

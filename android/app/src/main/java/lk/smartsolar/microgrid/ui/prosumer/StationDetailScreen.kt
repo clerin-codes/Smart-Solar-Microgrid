@@ -103,7 +103,7 @@ fun StationDetailScreen(id: String, onBack: () -> Unit, onReserve: (stationId: S
                                 Text(Fmt.range(slot.startTime, slot.endTime), fontWeight = FontWeight.Medium)
                                 Text("${Fmt.kw(slot.availableKw)} of ${Fmt.kw(slot.capacityKw)} available", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            if (s.isActive && slot.isBookable) {
+                            if (s.isActive && slot.isBookable && !TimeRules.hasStarted(slot)) {
                                 SunChainButton("Reserve", { onReserve(s.id, slot.id) }, Modifier.testTag("reserve_${slot.id}"), kind = ButtonKind.Success, compact = true)
                             } else {
                                 StatusChip(slot.statusEnum.name)

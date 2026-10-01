@@ -1,3 +1,11 @@
+/*
+ * File: SeedDataService.cs
+ * Project: Smart Solar Microgrid
+ * Description: Creates the three repeatable development accounts.
+ * Author: Shakanyah - IT23214002
+ * Author: Sithmi - IT23241114
+ */
+
 using MongoDB.Driver;
 
 using SmartSolarMicrogrid.Api.Models;
@@ -10,17 +18,16 @@ public class SeedDataService
 
     public SeedDataService(IMongoDatabase database)
     {
+        // Responsible: Shakanyah - IT23214002; Sithmi - IT23241114
+        // Store the MongoDB database used by the seed routines.
         _database = database;
     }
 
     public async Task SeedAsync()
     {
+        // Responsible: Shakanyah - IT23214002; Sithmi - IT23241114
+        // Keep automatic demo data limited to the three documented accounts.
         await SeedUsersAsync();
-
-        var stationIds =
-            await SeedStationsAsync();
-
-        await SeedSlotsAsync(stationIds);
     }
 
 
@@ -30,6 +37,8 @@ public class SeedDataService
 
     private async Task SeedUsersAsync()
     {
+        // Responsible: Shakanyah - IT23214002
+        // Insert the default application users when they do not already exist.
         var collection =
             _database.GetCollection<UserDetails>(
                 "UserDetails");
@@ -194,6 +203,8 @@ public class SeedDataService
 
     private async Task<List<string>> SeedStationsAsync()
     {
+        // Responsible: Sithmi - IT23241114
+        // Insert the default stations and return their database identifiers.
         var collection =
             _database.GetCollection<SolarStationInfo>(
                 "SolarStationInfo");
@@ -463,6 +474,8 @@ public class SeedDataService
     private async Task SeedSlotsAsync(
         List<string> stationIds)
     {
+        // Responsible: Sithmi - IT23241114
+        // Insert future booking slots for each seeded station.
         if (stationIds.Count == 0)
         {
             return;

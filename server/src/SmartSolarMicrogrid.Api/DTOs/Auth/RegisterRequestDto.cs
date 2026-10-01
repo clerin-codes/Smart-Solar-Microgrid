@@ -1,3 +1,10 @@
+/*
+ * File: RegisterRequestDto.cs
+ * Project: Smart Solar Microgrid
+ * Description: Defines the account registration request contract.
+ * Author: Shakanyah - IT23214002
+ */
+
 namespace SmartSolarMicrogrid.Api.DTOs.Auth;
 
 public class RegisterRequestDto

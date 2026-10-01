@@ -16,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.HourglassTop
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.TaskAlt
@@ -31,13 +32,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.repeatOnLifecycle
-import kotlinx.coroutines.delay
 import lk.smartsolar.microgrid.data.ReservationStatus
 import lk.smartsolar.microgrid.data.statusEnum
 import lk.smartsolar.microgrid.ui.common.EmptyState
@@ -65,8 +62,6 @@ import lk.smartsolar.microgrid.ui.theme.SunChainBlue
 import lk.smartsolar.microgrid.ui.theme.TextSecondary
 import lk.smartsolar.microgrid.util.Fmt
 
-private const val REFRESH_MS = 15_000L
-
 /** Pending requests previewed on the dashboard; the Approvals tab lists them all. */
 private const val PREVIEW_COUNT = 3
 
@@ -82,23 +77,15 @@ fun OperatorDashboardScreen(onScan: () -> Unit, onOpen: (String) -> Unit, onProf
     val names by vm.stationNames.collectAsState()
     val ui by vm.ui.collectAsState()
     val approving by vm.approving.collectAsState()
+    val rejecting by vm.rejecting.collectAsState()
     val snackbar = LocalSnackbar.current
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
     val fullName = session?.fullName.orEmpty()
 
     LaunchedEffect(Unit) { vm.events.collect { snackbar.showSnackbar(it) } }
-    // Live updates while the dashboard is on screen.
-    LaunchedEffect(lifecycle) {
-        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            while (true) {
-                delay(REFRESH_MS)
-                vm.refreshQuietly()
-            }
-        }
-    }
-
     val stats = remember(items) { OperatorStats.from(items) }
-    val pending = items.filter { it.statusEnum == ReservationStatus.Pending }
+    val pending = items
+        .filter { it.statusEnum == ReservationStatus.Pending }
+        .sortedByDescending { it.createdAt }
 
     Column(Modifier.fillMaxSize()) {
         Row(
@@ -139,12 +126,20 @@ fun OperatorDashboardScreen(onScan: () -> Unit, onOpen: (String) -> Unit, onProf
                     ReservationCard(
                         r, names[r.stationId] ?: "Station", onClick = { onOpen(r.id) }, showNic = true,
                         footer = {
-                            SunChainButton(
-                                if (approving == r.id) "Approving..." else "Approve",
-                                onClick = { vm.approve(r.id) },
-                                modifier = Modifier.fillMaxWidth().testTag("approve_${r.number}"),
-                                kind = ButtonKind.Success, enabled = approving == null, icon = Icons.Rounded.CheckCircle, compact = true,
-                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                                SunChainButton(
+                                    if (approving == r.id) "Approving..." else "Approve",
+                                    onClick = { vm.approve(r.id) },
+                                    modifier = Modifier.weight(1f).testTag("approve_${r.number}"),
+                                    kind = ButtonKind.Success, enabled = approving == null && rejecting == null, icon = Icons.Rounded.CheckCircle, compact = true,
+                                )
+                                SunChainButton(
+                                    if (rejecting == r.id) "Rejecting..." else "Reject",
+                                    onClick = { vm.reject(r.id) },
+                                    modifier = Modifier.weight(1f).testTag("reject_${r.number}"),
+                                    kind = ButtonKind.Danger, enabled = approving == null && rejecting == null, icon = Icons.Rounded.Close, compact = true,
+                                )
+                            }
                         },
                     )
                 }
@@ -155,7 +150,7 @@ fun OperatorDashboardScreen(onScan: () -> Unit, onOpen: (String) -> Unit, onProf
                     )
                 }
                 Text(
-                    "Live · refreshes every ${REFRESH_MS / 1000}s" + if (lastSync > 0) " · last updated ${Fmt.stamp(lastSync)}" else "",
+                    "Live · refreshes every 3s" + if (lastSync > 0) " · last updated ${Fmt.stamp(lastSync)}" else "",
                     style = MaterialTheme.typography.labelSmall, color = TextSecondary,
                 )
             }

@@ -1,6 +1,6 @@
 /*
  * Smart Solar Microgrid Trading System
- * Member 1 - Authentication and Accounts
+ * Author: Shakanyah - IT23214002
  * File: UserResponseDto.cs
  * Purpose: Safely returns user information without exposing PasswordHash.
  */

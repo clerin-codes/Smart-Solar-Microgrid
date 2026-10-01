@@ -1,6 +1,6 @@
 /*
  * Smart Solar Microgrid Trading System
- * Member 1 - Authentication and Accounts
+ * Author: Shakanyah - IT23214002
  * File: UserRepository.cs
  * Purpose: Implements MongoDB persistence, indexing and queries
  *          for UserDetails accounts.
@@ -20,6 +20,7 @@ public class UserRepository : IUserRepository
     public UserRepository(
         IMongoDatabase database)
     {
+        // Responsible: Shakanyah - IT23214002
         // Obtain the UserDetails MongoDB collection.
         _collection =
             database.GetCollection<UserDetails>(
@@ -28,6 +29,7 @@ public class UserRepository : IUserRepository
 
     public async Task EnsureIndexesAsync()
     {
+        // Responsible: Shakanyah - IT23214002
         // Create database-level indexes that enforce unique e-mail
         // addresses and improve common role/status queries.
         var indexes =
@@ -66,6 +68,7 @@ public class UserRepository : IUserRepository
     public async Task<UserDetails?> GetByNICAsync(
         string nic)
     {
+        // Responsible: Shakanyah - IT23214002
         // Retrieve one account using NIC as the primary key.
         return await _collection
             .Find(x => x.NIC == nic)
@@ -74,6 +77,7 @@ public class UserRepository : IUserRepository
 
     public async Task<UserDetails?> GetByEmailAsync(string email)
     {
+        // Responsible: Shakanyah - IT23214002
         // Emails are compared case-insensitively.
         var normalised = email.ToLower();
 
@@ -84,6 +88,7 @@ public class UserRepository : IUserRepository
 
     public async Task<List<UserDetails>> GetAllAsync()
     {
+        // Responsible: Shakanyah - IT23214002
         // Retrieve all user accounts ordered newest first.
         return await _collection
             .Find(_ => true)
@@ -95,6 +100,7 @@ public class UserRepository : IUserRepository
         UserRole? role = null,
         AccountStatus? status = null)
     {
+        // Responsible: Shakanyah - IT23214002
         // Build optional MongoDB-side filters.
         var filter =
             Builders<UserDetails>.Filter.Empty;
@@ -124,6 +130,7 @@ public class UserRepository : IUserRepository
     public async Task<List<UserDetails>> GetByStatusAsync(
         AccountStatus status)
     {
+        // Responsible: Shakanyah - IT23214002
         // Retrieve accounts matching the supplied lifecycle status.
         return await _collection
             .Find(x => x.Status == status)
@@ -135,6 +142,7 @@ public class UserRepository : IUserRepository
         string email,
         string? excludeNic = null)
     {
+        // Responsible: Shakanyah - IT23214002
         // Build a duplicate-email query while optionally excluding
         // the account currently being edited.
         var filter =
@@ -159,6 +167,7 @@ public class UserRepository : IUserRepository
     public async Task CreateAsync(
         UserDetails user)
     {
+        // Responsible: Shakanyah - IT23214002
         // Insert a new account and translate duplicate-key races
         // into a controlled validation error.
         try
@@ -179,6 +188,7 @@ public class UserRepository : IUserRepository
     public async Task UpdateAsync(
         UserDetails user)
     {
+        // Responsible: Shakanyah - IT23214002
         // Replace the account identified by the immutable NIC.
         try
         {

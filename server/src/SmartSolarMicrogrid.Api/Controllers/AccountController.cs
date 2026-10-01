@@ -1,6 +1,6 @@
 /*
  * Smart Solar Microgrid Trading System
- * Member 1 - Authentication and Accounts
+ * Author: Shakanyah - IT23214002
  * File: AccountController.cs
  * Purpose: Provides authenticated self-service account operations.
  */
@@ -25,6 +25,7 @@ public class AccountController : ControllerBase
     public AccountController(
         IUserService userService)
     {
+        // Responsible: Shakanyah - IT23214002
         // Store account-management service.
         _userService = userService;
     }
@@ -32,6 +33,7 @@ public class AccountController : ControllerBase
     [HttpGet("me")]
     public async Task<IActionResult> GetMyProfile()
     {
+        // Responsible: Shakanyah - IT23214002
         // Load the profile belonging to the authenticated JWT user.
         var nic =
             GetCurrentUserNic();
@@ -46,6 +48,7 @@ public class AccountController : ControllerBase
     public async Task<IActionResult> UpdateMyProfile(
         [FromBody] UpdateUserDto request)
     {
+        // Responsible: Shakanyah - IT23214002
         // Update only the authenticated account's editable details.
         var nic =
             GetCurrentUserNic();
@@ -63,6 +66,7 @@ public class AccountController : ControllerBase
     public async Task<IActionResult>
         RequestDeactivation()
     {
+        // Responsible: Shakanyah - IT23214002
         // Allow a Prosumer to request deactivation of their own account.
         var nic =
             GetCurrentUserNic();
@@ -82,6 +86,7 @@ public class AccountController : ControllerBase
 
     private string GetCurrentUserNic()
     {
+        // Responsible: Shakanyah - IT23214002
         // Extract the trusted NIC identity claim from the JWT.
         var nic =
             User.FindFirstValue(

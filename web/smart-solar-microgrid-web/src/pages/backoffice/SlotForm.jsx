@@ -1,8 +1,33 @@
 import { useEffect, useState } from 'react'
 import { getAllStations } from '../../services/api/stationService'
 
+const getSriLankaToday = () => {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Colombo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).formatToParts(new Date())
+
+    const value = (type) =>
+        parts.find((part) => part.type === type)?.value
+
+    return `${value('year')}-${value('month')}-${value('day')}`
+}
+
+const getWeekday = (date) =>
+    date
+        ? new Intl.DateTimeFormat('en-US', {
+            weekday: 'long',
+            timeZone: 'UTC',
+        }).format(new Date(`${date}T00:00:00Z`))
+        : ''
+
+const shortTime = (time) => time?.substring(0, 5) ?? ''
+
 function SlotForm({ slot, onClose, onSubmit }) {
     const isEdit = Boolean(slot)
+    const today = getSriLankaToday()
 
     const [form, setForm] = useState({
         stationId: '',
@@ -18,6 +43,17 @@ function SlotForm({ slot, onClose, onSubmit }) {
         useState(false)
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState('')
+    const [fieldErrors, setFieldErrors] = useState({})
+
+    const selectedStation = stations.find(
+        (station) => station.id === form.stationId
+    )
+    const selectedDay = getWeekday(form.slotDate)
+    const selectedSchedule = selectedStation?.schedules?.find(
+        (schedule) =>
+            schedule.day?.toLowerCase() ===
+            selectedDay.toLowerCase()
+    )
 
     // Load stations for dropdown
     useEffect(() => {
@@ -74,19 +110,74 @@ function SlotForm({ slot, onClose, onSubmit }) {
             ...prev,
             [field]: value,
         }))
+        setFieldErrors((prev) =>
+            field === 'stationId' || field === 'slotDate'
+                ? {
+                    ...prev,
+                    slotDate: '',
+                    startTime: '',
+                    endTime: '',
+                }
+                : {
+                    ...prev,
+                    [field]: '',
+                }
+        )
+        setError('')
     }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
         setError('')
+
+        const validationErrors = {}
+
+        if (!form.slotDate || form.slotDate < today) {
+            validationErrors.slotDate = form.slotDate
+                ? 'Slot date cannot be in the past.'
+                : 'Slot date is required.'
+        }
+
+        if (
+            !isEdit &&
+            form.stationId &&
+            form.slotDate &&
+            !validationErrors.slotDate &&
+            (!selectedSchedule || !selectedSchedule.isAvailable)
+        ) {
+            validationErrors.slotDate = `The station is unavailable on ${selectedDay}.`
+        }
+
+        if (
+            !isEdit &&
+            selectedSchedule?.isAvailable &&
+            form.startTime &&
+            form.startTime < shortTime(selectedSchedule.openingTime)
+        ) {
+            validationErrors.startTime = `Start time cannot be before ${shortTime(selectedSchedule.openingTime)}.`
+        }
+
+        if (
+            !isEdit &&
+            selectedSchedule?.isAvailable &&
+            form.endTime &&
+            form.endTime > shortTime(selectedSchedule.closingTime)
+        ) {
+            validationErrors.endTime = `End time cannot be after ${shortTime(selectedSchedule.closingTime)}.`
+        }
+
+        if (Object.keys(validationErrors).length > 0) {
+            setFieldErrors(validationErrors)
+            setError('Please correct the highlighted field.')
+            return
+        }
+
         setSaving(true)
 
         try {
             const payload = isEdit
                 ? {
-                    slotDate: new Date(form.slotDate)
-                        .toISOString()
-                        .split('T')[0],
+                    slotDate: form.slotDate,
                     startTime: form.startTime + ':00',
                     endTime: form.endTime + ':00',
                     capacityKw: Number(form.capacityKw),
@@ -96,9 +187,7 @@ function SlotForm({ slot, onClose, onSubmit }) {
                 }
                 : {
                     stationId: form.stationId,
-                    slotDate: new Date(form.slotDate)
-                        .toISOString()
-                        .split('T')[0],
+                    slotDate: form.slotDate,
                     startTime: form.startTime + ':00',
                     endTime: form.endTime + ':00',
                     capacityKw: Number(form.capacityKw),
@@ -111,10 +200,33 @@ function SlotForm({ slot, onClose, onSubmit }) {
             onClose()
         } catch (err) {
             console.error('Slot save error:', err)
-            setError(
+            const message =
                 err?.response?.data?.message ??
                 'Failed to save slot. Please try again.'
-            )
+
+            if (/slot date|past/i.test(message)) {
+                setFieldErrors((prev) => ({
+                    ...prev,
+                    slotDate: message,
+                }))
+            }
+
+            if (/slot time|schedule/i.test(message)) {
+                setFieldErrors((prev) => ({
+                    ...prev,
+                    startTime: message,
+                    endTime: message,
+                }))
+            }
+
+            if (/station is unavailable/i.test(message)) {
+                setFieldErrors((prev) => ({
+                    ...prev,
+                    slotDate: message,
+                }))
+            }
+
+            setError(message)
         } finally {
             setSaving(false)
         }
@@ -202,6 +314,7 @@ function SlotForm({ slot, onClose, onSubmit }) {
                             <input
                                 type="date"
                                 value={form.slotDate}
+                                min={today}
                                 onChange={(e) =>
                                     handleChange(
                                         'slotDate',
@@ -209,8 +322,43 @@ function SlotForm({ slot, onClose, onSubmit }) {
                                     )
                                 }
                                 required
-                                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                aria-invalid={Boolean(
+                                    fieldErrors.slotDate
+                                )}
+                                aria-describedby="slot-date-help"
+                                className={`w-full px-4 py-2.5 border rounded-lg outline-none focus:ring-2 ${
+                                    fieldErrors.slotDate
+                                        ? 'border-red-400 focus:ring-red-200 focus:border-red-500'
+                                        : 'border-slate-300 focus:ring-blue-500 focus:border-blue-500'
+                                }`}
                             />
+                            <p
+                                id="slot-date-help"
+                                className={`mt-1.5 text-xs ${
+                                    fieldErrors.slotDate
+                                        ? 'text-red-600'
+                                        : 'text-slate-500'
+                                }`}
+                            >
+                                {fieldErrors.slotDate ||
+                                    'Choose today or a future date.'}
+                            </p>
+
+                            {!isEdit &&
+                                form.stationId &&
+                                form.slotDate && (
+                                    <div
+                                        className={`mt-2 rounded-lg border px-3 py-2 text-xs ${
+                                            selectedSchedule?.isAvailable
+                                                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                                : 'border-amber-200 bg-amber-50 text-amber-700'
+                                        }`}
+                                    >
+                                        {selectedSchedule?.isAvailable
+                                            ? `${selectedDay} schedule: ${shortTime(selectedSchedule.openingTime)} to ${shortTime(selectedSchedule.closingTime)}. The slot must stay within these hours.`
+                                            : `This station is unavailable on ${selectedDay}. Choose another date.`}
+                                    </div>
+                                )}
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
@@ -221,6 +369,20 @@ function SlotForm({ slot, onClose, onSubmit }) {
                                 <input
                                     type="time"
                                     value={form.startTime}
+                                    min={
+                                        selectedSchedule?.isAvailable
+                                            ? shortTime(
+                                                selectedSchedule.openingTime
+                                            )
+                                            : undefined
+                                    }
+                                    max={
+                                        selectedSchedule?.isAvailable
+                                            ? shortTime(
+                                                selectedSchedule.closingTime
+                                            )
+                                            : undefined
+                                    }
                                     onChange={(e) =>
                                         handleChange(
                                             'startTime',
@@ -228,8 +390,20 @@ function SlotForm({ slot, onClose, onSubmit }) {
                                         )
                                     }
                                     required
-                                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    aria-invalid={Boolean(
+                                        fieldErrors.startTime
+                                    )}
+                                    className={`w-full px-4 py-2.5 border rounded-lg outline-none focus:ring-2 ${
+                                        fieldErrors.startTime
+                                            ? 'border-red-400 focus:ring-red-200 focus:border-red-500'
+                                            : 'border-slate-300 focus:ring-blue-500 focus:border-blue-500'
+                                    }`}
                                 />
+                                {fieldErrors.startTime && (
+                                    <p className="mt-1.5 text-xs text-red-600">
+                                        {fieldErrors.startTime}
+                                    </p>
+                                )}
                             </div>
 
                             <div>
@@ -239,6 +413,20 @@ function SlotForm({ slot, onClose, onSubmit }) {
                                 <input
                                     type="time"
                                     value={form.endTime}
+                                    min={
+                                        selectedSchedule?.isAvailable
+                                            ? shortTime(
+                                                selectedSchedule.openingTime
+                                            )
+                                            : undefined
+                                    }
+                                    max={
+                                        selectedSchedule?.isAvailable
+                                            ? shortTime(
+                                                selectedSchedule.closingTime
+                                            )
+                                            : undefined
+                                    }
                                     onChange={(e) =>
                                         handleChange(
                                             'endTime',
@@ -246,8 +434,20 @@ function SlotForm({ slot, onClose, onSubmit }) {
                                         )
                                     }
                                     required
-                                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    aria-invalid={Boolean(
+                                        fieldErrors.endTime
+                                    )}
+                                    className={`w-full px-4 py-2.5 border rounded-lg outline-none focus:ring-2 ${
+                                        fieldErrors.endTime
+                                            ? 'border-red-400 focus:ring-red-200 focus:border-red-500'
+                                            : 'border-slate-300 focus:ring-blue-500 focus:border-blue-500'
+                                    }`}
                                 />
+                                {fieldErrors.endTime && (
+                                    <p className="mt-1.5 text-xs text-red-600">
+                                        {fieldErrors.endTime}
+                                    </p>
+                                )}
                             </div>
                         </div>
 

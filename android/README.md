@@ -27,7 +27,7 @@ util          TimeRules (booking window + 12 h lock), Fmt, QrCodes, Files, Recei
 
 1. Start the API (`server/`) so it listens on port 5130.
 2. Open `android/` in Android Studio and run on an emulator. The app talks to `http://10.0.2.2:5130/api/` by default (the emulator's alias for your computer).
-3. On a **physical phone** on the same Wi-Fi, either change the address on the login screen ("Server: ..."), or create `android/local.properties` (git-ignored):
+3. On a **physical phone** on the same Wi-Fi, use the **Connect server** section below **Create a prosumer account** on the login screen, or create `android/local.properties` (git-ignored):
 
 ```
 api.baseUrl=http://192.168.1.20:5130/api/
