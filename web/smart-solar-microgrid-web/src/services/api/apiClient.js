@@ -1,7 +1,13 @@
 import axios from 'axios'
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+
+if (!API_BASE_URL) {
+  throw new Error('VITE_API_BASE_URL is not configured')
+}
+
 const apiClient = axios.create({
-  baseURL: 'http://localhost:5130/api',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -15,7 +21,7 @@ apiClient.interceptors.request.use(
     if (!token && !config.url.includes('/Auth/login')) {
       try {
         const response = await axios.post(
-          'http://localhost:5130/api/Auth/login',
+          `${API_BASE_URL}/Auth/login`,
           {
             nic: '200000000001',
             password: 'Admin@123',
