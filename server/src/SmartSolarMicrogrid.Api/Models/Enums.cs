@@ -1,10 +1,28 @@
+/*
+ * Smart Solar Microgrid Trading System
+ * Author: Shakanyah - IT23214002
+ * Author: Sithmi - IT23241114
+ * Author: Clerin - IT23402584
+ * Author: Thuverakan - IT23281332
+ * File: Enums.cs
+ * Purpose: Defines system roles and account lifecycle states.
+ */
+
 namespace SmartSolarMicrogrid.Api.Models;
 
 public enum UserRole
 {
-    Backoffice,
-    GridOperator,
-    Prosumer
+    Backoffice = 0,
+    GridOperator = 1,
+    Prosumer = 2
+}
+
+public enum AccountStatus
+{
+    Active = 0,
+    PendingActivation = 1,
+    DeactivationRequested = 2,
+    Deactivated = 3
 }
 
 public enum ReservationStatus

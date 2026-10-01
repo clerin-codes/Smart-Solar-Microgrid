@@ -53,8 +53,12 @@ class ReservationsViewModel(
     /** id of the reservation currently being approved, if any */
     val approving: StateFlow<String?> = _approving
 
+    private val _rejecting = MutableStateFlow<String?>(null)
+    /** id of the reservation currently being rejected, if any */
+    val rejecting: StateFlow<String?> = _rejecting
+
     fun approve(id: String) {
-        if (_approving.value != null) return
+        if (_approving.value != null || _rejecting.value != null) return
         _approving.value = id
         viewModelScope.launch {
             try {
@@ -64,6 +68,21 @@ class ReservationsViewModel(
                 _events.emit(e.message ?: "Could not approve the reservation.")
             } finally {
                 _approving.value = null
+            }
+        }
+    }
+
+    fun reject(id: String) {
+        if (_approving.value != null || _rejecting.value != null) return
+        _rejecting.value = id
+        viewModelScope.launch {
+            try {
+                reservations.reject(id)
+                _events.emit("Reservation rejected.")
+            } catch (e: AppException) {
+                _events.emit(e.message ?: "Could not reject the reservation.")
+            } finally {
+                _rejecting.value = null
             }
         }
     }

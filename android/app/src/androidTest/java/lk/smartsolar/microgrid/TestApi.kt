@@ -42,13 +42,19 @@ object TestApi {
 
     fun registerProsumer(): Prosumer {
         val nic = "88" + (1..10).joinToString("") { Random.nextInt(10).toString() }
-        val password = "Tester@1234"
+        val password = "Tester@12345"
         val r = call(
-            "POST", "auth/register",
+            "POST", "auth/register-prosumer",
             body = """{"nic":"$nic","fullName":"Test Prosumer","email":"$nic@test.lk","phoneNumber":"0771234567","password":"$password"}""",
         )
         check(r.code == 201) { "register failed: ${r.code} ${r.body}" }
-        return Prosumer(nic, password, JSONObject(r.body).getString("token"))
+        activateProsumer(nic)
+        return Prosumer(nic, password, login(nic, password))
+    }
+
+    fun activateProsumer(nic: String) {
+        val r = call("POST", "users/$nic/activate", adminToken())
+        check(r.code == 200) { "activation failed: ${r.code} ${r.body}" }
     }
 
     fun stationId(name: String = "Jaffna Solar Station"): String {

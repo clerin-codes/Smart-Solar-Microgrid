@@ -88,6 +88,15 @@ class ModelsAndUtilsTest {
     }
 
     @Test
+    fun errorBody_parsesFieldValidationErrors() {
+        val e = gson.fromJson(
+            """{"statusCode":400,"message":"Validation failed.","errors":{"password":["Password is too weak."]}}""",
+            ErrorBody::class.java,
+        )
+        assertEquals("Password is too weak.", e.errors?.get("password")?.first())
+    }
+
+    @Test
     fun enums_fallBackSafelyOnUnknownValues() {
         assertEquals(ReservationStatus.Pending, ReservationStatus.from(99))
         assertEquals(SlotStatus.Closed, SlotStatus.from(99))
@@ -118,10 +127,14 @@ class ModelsAndUtilsTest {
         assertNull(AuthValidation.phone("0771234567"))
         assertNull(AuthValidation.phone("+94771234567"))
         assertNotNull(AuthValidation.password("short"))
-        assertNull(AuthValidation.password("longenough"))
+        assertNotNull(AuthValidation.password("longenough"))
+        assertNull(AuthValidation.password("StrongPass12!"))
         assertNotNull(AuthValidation.confirm("a", "b"))
         assertNull(AuthValidation.confirm("a", "a"))
         assertNotNull(AuthValidation.nic("  "))
+        assertNotNull(AuthValidation.nic("12345"))
+        assertNull(AuthValidation.nic("200012345678"))
+        assertNull(AuthValidation.nic("123456789V"))
     }
 
     @Test

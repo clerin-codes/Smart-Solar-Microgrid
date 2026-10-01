@@ -7,6 +7,7 @@ import java.time.LocalTime
 import java.time.ZoneOffset
 import lk.smartsolar.microgrid.data.ReservationStatus
 import lk.smartsolar.microgrid.data.local.ReservationEntity
+import lk.smartsolar.microgrid.data.local.SlotEntity
 import lk.smartsolar.microgrid.data.statusEnum
 
 /** Booking rules, mirroring what the API enforces (Sri Lanka time, 7-day window, 12-hour lock). */
@@ -29,6 +30,10 @@ object TimeRules {
 
     fun hoursUntilStart(date: String, startTime: String, now: Instant = Instant.now()): Double =
         (startInstant(date, startTime).toEpochMilli() - now.toEpochMilli()) / 3_600_000.0
+
+    /** A slot at or before the current instant can no longer be selected. */
+    fun hasStarted(slot: SlotEntity, now: Instant = Instant.now()): Boolean =
+        !startInstant(slot.date, slot.startTime).isAfter(now)
 
     fun isLocked(r: ReservationEntity, now: Instant = Instant.now()): Boolean =
         hoursUntilStart(r.date, r.startTime, now) < LOCK_HOURS

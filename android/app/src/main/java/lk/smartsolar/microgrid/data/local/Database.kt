@@ -11,6 +11,8 @@ import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Transaction
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 @Entity(tableName = "stations")
@@ -65,9 +67,22 @@ data class ReservationEntity(
 @Entity(tableName = "favorites")
 data class FavoriteEntity(@PrimaryKey val stationId: String)
 
+/** Non-sensitive signed-in user/profile data cached in SQLite for local user management. */
+@Entity(tableName = "local_users")
+data class LocalUserEntity(
+    @PrimaryKey val nic: String,
+    val fullName: String,
+    val email: String? = null,
+    val phoneNumber: String? = null,
+    val role: String,
+    val isActive: Boolean = true,
+    val profileImage: String? = null,
+    val cachedAt: Long = 0L,
+)
+
 @Dao
 interface StationDao {
-    @Query("SELECT * FROM stations ORDER BY name")
+    @Query("SELECT * FROM stations ORDER BY id DESC")
     fun observeAll(): Flow<List<StationEntity>>
 
     @Query("SELECT * FROM stations WHERE id = :id")
@@ -88,10 +103,10 @@ interface StationDao {
 
 @Dao
 interface SlotDao {
-    @Query("SELECT * FROM slots ORDER BY date, startTime")
+    @Query("SELECT * FROM slots ORDER BY id DESC")
     fun observeAll(): Flow<List<SlotEntity>>
 
-    @Query("SELECT * FROM slots WHERE stationId = :stationId ORDER BY date, startTime")
+    @Query("SELECT * FROM slots WHERE stationId = :stationId ORDER BY id DESC")
     fun observeForStation(stationId: String): Flow<List<SlotEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -152,9 +167,24 @@ interface FavoriteDao {
     suspend fun clear()
 }
 
+@Dao
+interface LocalUserDao {
+    @Query("SELECT * FROM local_users WHERE nic = :nic")
+    fun observe(nic: String): Flow<LocalUserEntity?>
+
+    @Query("SELECT * FROM local_users WHERE nic = :nic")
+    suspend fun get(nic: String): LocalUserEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(user: LocalUserEntity)
+
+    @Query("DELETE FROM local_users")
+    suspend fun clear()
+}
+
 @Database(
-    entities = [StationEntity::class, SlotEntity::class, ReservationEntity::class, FavoriteEntity::class],
-    version = 1,
+    entities = [StationEntity::class, SlotEntity::class, ReservationEntity::class, FavoriteEntity::class, LocalUserEntity::class],
+    version = 2,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -162,11 +192,20 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun slots(): SlotDao
     abstract fun reservations(): ReservationDao
     abstract fun favorites(): FavoriteDao
+    abstract fun users(): LocalUserDao
 
     companion object {
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """CREATE TABLE IF NOT EXISTS `local_users` (`nic` TEXT NOT NULL, `fullName` TEXT NOT NULL, `email` TEXT, `phoneNumber` TEXT, `role` TEXT NOT NULL, `isActive` INTEGER NOT NULL, `profileImage` TEXT, `cachedAt` INTEGER NOT NULL, PRIMARY KEY(`nic`))""",
+                )
+            }
+        }
+
         fun create(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, "sunchain.db")
-                .fallbackToDestructiveMigration(dropAllTables = true)
+                .addMigrations(MIGRATION_1_2)
                 .build()
     }
 }

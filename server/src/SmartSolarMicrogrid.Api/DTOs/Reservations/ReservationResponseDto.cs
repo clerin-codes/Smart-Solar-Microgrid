@@ -1,3 +1,11 @@
+/*
+ * File: ReservationResponseDto.cs
+ * Project: Smart Solar Microgrid
+ * Description: Defines reservation data returned to API clients.
+ * Author: Clerin - IT23402584
+ * Author: Thuverakan - IT23281332
+ */
+
 using SmartSolarMicrogrid.Api.Models;
 
 namespace SmartSolarMicrogrid.Api.DTOs.Reservations;

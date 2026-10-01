@@ -63,7 +63,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import lk.smartsolar.microgrid.data.local.Session
-import lk.smartsolar.microgrid.data.local.SessionStore
 import lk.smartsolar.microgrid.data.remote.AppException
 import lk.smartsolar.microgrid.data.remote.ProfileDto
 import lk.smartsolar.microgrid.data.repo.AuthRepository
@@ -101,15 +100,33 @@ data class ProfileUi(
 class ProfileViewModel(
     private val auth: AuthRepository,
     private val sync: SyncManager,
-    private val settings: SessionStore,
 ) : ViewModel() {
     private val _ui = MutableStateFlow(ProfileUi())
     val ui: StateFlow<ProfileUi> = _ui
     private val _events = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val events: SharedFlow<String> = _events
-    val serverUrl: StateFlow<String> = settings.baseUrl
-
     init {
+        auth.current.value?.nic?.let { nic ->
+            viewModelScope.launch {
+                auth.cachedProfile(nic).collect { cached ->
+                    if (cached != null && _ui.value.profile == null) {
+                        _ui.update {
+                            it.copy(
+                                profile = ProfileDto(
+                                    cached.nic,
+                                    cached.fullName,
+                                    cached.email.orEmpty(),
+                                    cached.phoneNumber.orEmpty(),
+                                    cached.role,
+                                    cached.isActive,
+                                    cached.profileImage,
+                                ),
+                            )
+                        }
+                    }
+                }
+            }
+        }
         load()
     }
 
@@ -184,8 +201,6 @@ class ProfileViewModel(
         }
     }
 
-    fun setServerUrl(url: String) = settings.setBaseUrl(url)
-
     fun logout() {
         viewModelScope.launch { auth.logout() }
     }
@@ -196,7 +211,7 @@ fun ProfileScreen() {
     val container = LocalContainer.current
     val session by container.session.session.collectAsState()
     val lastSync by container.session.lastSync.collectAsState()
-    val vm = containerViewModel { ProfileViewModel(it.auth, it.sync, it.session) }
+    val vm = containerViewModel { ProfileViewModel(it.auth, it.sync) }
     val ui by vm.ui.collectAsState()
     val snackbar = LocalSnackbar.current
     var confirmLogout by remember { mutableStateOf(false) }

@@ -171,7 +171,7 @@ fun BookingScreen(
         val days = remember { TimeRules.bookingWindow().map(LocalDate::toString) }
         val currentSlotId = existing?.slotId
         val stationSlots = slots.filter { it.stationId == ui.stationId }
-        val isFree = { s: SlotEntity -> s.isBookable || s.id == currentSlotId }
+        val isFree = { s: SlotEntity -> !TimeRules.hasStarted(s) && (s.isBookable || s.id == currentSlotId) }
         val firstFreeDay = days.firstOrNull { d -> stationSlots.any { it.date == d && isFree(it) } }
         val date = ui.date ?: firstFreeDay ?: days.first()
         val daySlots = stationSlots.filter { it.date == date }.sortedBy { it.startTime }

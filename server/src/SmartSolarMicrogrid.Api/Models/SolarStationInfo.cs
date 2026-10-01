@@ -1,3 +1,10 @@
+/*
+ * File: SolarStationInfo.cs
+ * Project: Smart Solar Microgrid
+ * Description: Models solar station details stored in MongoDB.
+ * Author: Sithmi - IT23241114
+ */
+
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 

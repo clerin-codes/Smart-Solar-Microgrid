@@ -53,6 +53,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -78,6 +81,8 @@ import lk.smartsolar.microgrid.ui.prosumer.ProsumerHomeScreen
 import lk.smartsolar.microgrid.ui.prosumer.StationDetailScreen
 import lk.smartsolar.microgrid.ui.prosumer.StationsScreen
 import lk.smartsolar.microgrid.ui.prosumer.TransactionHistoryScreen
+
+private const val LIVE_REFRESH_MS = 3_000L
 
 private object Routes {
     const val LOGIN = "login"
@@ -169,11 +174,21 @@ private fun MainNav(session: Session) {
 
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     val container = LocalContainer.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
     // Pick up the profile picture (stored on the server) so the app bars can show it; failures just keep the initials.
     LaunchedEffect(session.nic) { runCatching { container.auth.profile() } }
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !container.notifier.canNotify()) {
             askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+    // Keep every server-backed screen current while the signed-in app is visible.
+    LaunchedEffect(lifecycle, session.nic) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                delay(LIVE_REFRESH_MS)
+                container.sync.sync(notify = false)
+            }
         }
     }
 

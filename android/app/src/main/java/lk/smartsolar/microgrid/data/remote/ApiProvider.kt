@@ -13,7 +13,11 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 /** Failure with a message that is safe to show to the user. */
-open class AppException(message: String, val code: Int? = null) : Exception(message)
+open class AppException(
+    message: String,
+    val code: Int? = null,
+    val fieldErrors: Map<String, String> = emptyMap(),
+) : Exception(message)
 
 class OfflineException : AppException("No connection to the server. Showing saved data.")
 
@@ -24,9 +28,9 @@ private class AuthInterceptor(private val session: SessionStore) : Interceptor {
         session.token?.let { builder.header("Authorization", "Bearer $it") }
         val response = chain.proceed(builder.build())
 
-        // A rejected/expired JWT gives an empty 401; business-rule errors carry a JSON message.
+        // Any authenticated request rejected with 401 has an invalid or expired JWT.
         val isLogin = chain.request().url.encodedPath.endsWith("/auth/login")
-        if (response.code == 401 && !isLogin && session.token != null && response.header("Content-Length") == "0") {
+        if (response.code == 401 && !isLogin && chain.request().header("Authorization") != null) {
             session.clear()
         }
         return response
@@ -55,23 +59,39 @@ class ApiProvider(private val session: SessionStore) {
     fun api(): ApiService {
         val url = session.baseUrl.value
         if (service == null || builtFor != url) {
-            service = Retrofit.Builder()
-                .baseUrl(url)
-                .client(client)
-                .addConverterFactory(GsonConverterFactory.create(gson))
-                .build()
-                .create(ApiService::class.java)
+            service = createService(url)
             builtFor = url
         }
         return service!!
     }
+
+    /** Checks a candidate server without changing the address used by the rest of the app. */
+    suspend fun testConnection(url: String): HealthResponse =
+        try {
+            createService(url).health()
+        } catch (e: HttpException) {
+            throw toAppException(e)
+        } catch (e: IOException) {
+            Log.w(TAG, "Server connection test failed for $url", e)
+            throw AppException("Could not connect to the server. Check the URL and network.")
+        } catch (e: IllegalArgumentException) {
+            throw AppException("The server address is not valid.")
+        }
+
+    private fun createService(url: String): ApiService =
+        Retrofit.Builder()
+            .baseUrl(url)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create(gson))
+            .build()
+            .create(ApiService::class.java)
 
     /** Runs an API call, converting transport and HTTP failures into [AppException]s. */
     suspend fun <T> call(block: suspend (ApiService) -> T): T =
         try {
             block(api())
         } catch (e: HttpException) {
-            throw AppException(errorMessage(e), e.code())
+            throw toAppException(e)
         } catch (e: IOException) {
             Log.w(TAG, "Network failure calling ${session.baseUrl.value}", e)
             throw OfflineException()
@@ -79,10 +99,10 @@ class ApiProvider(private val session: SessionStore) {
             throw AppException("The server address is not valid. Check it in Settings.")
         }
 
-    private fun errorMessage(e: HttpException): String {
+    private fun toAppException(e: HttpException): AppException {
         val body = runCatching { e.response()?.errorBody()?.string() }.getOrNull()
         val parsed = body?.let { runCatching { gson.fromJson(it, ErrorBody::class.java) }.getOrNull() }
-        return parsed?.message?.takeIf { it.isNotBlank() }
+        val message = parsed?.message?.takeIf { it.isNotBlank() }
             ?: when (e.code()) {
                 400 -> "The server rejected the request. Check the details and try again."
                 401 -> "Invalid credentials, or your session has expired. Please sign in again."
@@ -92,5 +112,9 @@ class ApiProvider(private val session: SessionStore) {
                 in 500..599 -> "Server error (${e.code()}). Please try again later."
                 else -> "Something went wrong (${e.code()})."
             }
+        val fields = parsed?.errors.orEmpty().mapNotNull { (field, messages) ->
+            messages.firstOrNull()?.takeIf { it.isNotBlank() }?.let { field.lowercase() to it }
+        }.toMap()
+        return AppException(message, e.code(), fields)
     }
 }

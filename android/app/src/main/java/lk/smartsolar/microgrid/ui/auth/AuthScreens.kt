@@ -1,5 +1,6 @@
 ﻿package lk.smartsolar.microgrid.ui.auth
 
+import android.widget.Toast
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -22,12 +23,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Badge
+import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Phone
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -43,6 +47,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
@@ -130,9 +135,26 @@ fun SplashScreen() {
 fun LoginScreen(onRegister: () -> Unit) {
     val vm = containerViewModel { AuthViewModel(it.auth, it.sync, it.session) }
     val state by vm.state.collectAsState()
+    val serverState by vm.serverState.collectAsState()
+    val configuredServer by vm.baseUrl.collectAsState()
+    val context = LocalContext.current
     var nic by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var submitted by rememberSaveable { mutableStateOf(false) }
+    var serverUrl by rememberSaveable { mutableStateOf(configuredServer) }
+    var serverError by rememberSaveable { mutableStateOf<String?>(null) }
+    var showServerDialog by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(serverState.message) {
+        val message = serverState.message ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        serverError = if (serverState.connected) null else message
+        if (serverState.connected) {
+            serverUrl = vm.baseUrl.value
+            showServerDialog = false
+        }
+        vm.clearServerResult()
+    }
 
     AuthFrame(background = R.drawable.login_background) {
         Logo(Modifier.size(104.dp))
@@ -169,10 +191,67 @@ fun LoginScreen(onRegister: () -> Unit) {
         }
         Spacer(Modifier.height(Spacing.md))
         SunChainButton("Create a prosumer account", onRegister, Modifier.testTag("go_register"), kind = ButtonKind.Ghost)
+        TextButton(
+            onClick = {
+                serverUrl = configuredServer
+                serverError = null
+                vm.clearServerResult()
+                showServerDialog = true
+            },
+            modifier = Modifier.testTag("open_server_settings"),
+        ) {
+            Text("Connect server", style = MaterialTheme.typography.labelMedium)
+        }
         Spacer(Modifier.height(Spacing.lg))
         Text(
             "Decentralized Solar Energy Trading Platform",
             style = MaterialTheme.typography.labelSmall, color = TextSecondary, textAlign = TextAlign.Center,
+        )
+    }
+
+    if (showServerDialog) {
+        AlertDialog(
+            onDismissRequest = { showServerDialog = false },
+            modifier = Modifier.testTag("server_settings_dialog"),
+            icon = { androidx.compose.material3.Icon(Icons.Rounded.Cloud, contentDescription = null) },
+            title = { Text("Connect server") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    Text(
+                        "Enter the backend API address. It will be saved on this device.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    SunChainTextField(
+                        serverUrl,
+                        {
+                            serverUrl = it
+                            serverError = null
+                        },
+                        "Server URL",
+                        Modifier.testTag("server_url"),
+                        error = serverError,
+                        keyboardType = KeyboardType.Uri,
+                        imeAction = ImeAction.Done,
+                        leadingIcon = Icons.Rounded.Cloud,
+                        placeholder = "http://10.0.2.2:9339/api/",
+                    )
+                    Text(
+                        "Emulator: 10.0.2.2:9339\nPhone: your computer's Wi-Fi IP:9339",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { vm.configureServer(serverUrl) },
+                    modifier = Modifier.testTag("save_server"),
+                    enabled = !serverState.testing,
+                ) { Text(if (serverState.testing) "Testing…" else "Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showServerDialog = false }) { Text("Cancel") }
+            },
         )
     }
 }
@@ -181,6 +260,7 @@ fun LoginScreen(onRegister: () -> Unit) {
 fun RegisterScreen(onBack: () -> Unit) {
     val vm = containerViewModel { AuthViewModel(it.auth, it.sync, it.session) }
     val state by vm.state.collectAsState()
+    val context = LocalContext.current
     var nic by rememberSaveable { mutableStateOf("") }
     var name by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
@@ -189,7 +269,7 @@ fun RegisterScreen(onBack: () -> Unit) {
     var confirm by rememberSaveable { mutableStateOf("") }
     var submitted by rememberSaveable { mutableStateOf(false) }
 
-    val errors = mapOf(
+    val localErrors = mapOf(
         "nic" to AuthValidation.nic(nic),
         "name" to AuthValidation.name(name),
         "email" to AuthValidation.email(email),
@@ -197,7 +277,23 @@ fun RegisterScreen(onBack: () -> Unit) {
         "password" to AuthValidation.password(password),
         "confirm" to AuthValidation.confirm(password, confirm),
     )
-    fun err(key: String) = if (submitted) errors[key] else null
+    val serverKeys = mapOf(
+        "nic" to "nic",
+        "name" to "fullname",
+        "email" to "email",
+        "phone" to "phonenumber",
+        "password" to "password",
+    )
+    fun err(key: String): String? {
+        val serverError = serverKeys[key]?.let(state.fieldErrors::get)
+        return serverError ?: if (submitted) localErrors[key] else null
+    }
+
+    LaunchedEffect(state.success) {
+        val message = state.success ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        onBack()
+    }
 
     AuthFrame {
         Spacer(Modifier.height(Spacing.lg))
@@ -209,18 +305,18 @@ fun RegisterScreen(onBack: () -> Unit) {
 
         ErrorState(state.error, modifier = Modifier.widthIn(max = 480.dp), horizontalInset = 0.dp)
         GlassCard(Modifier.widthIn(max = 480.dp), shape = Shapes.hero, contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.xl), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-            SunChainTextField(nic, { nic = it; vm.clearError() }, "NIC", Modifier.testTag("reg_nic"), error = err("nic"), leadingIcon = Icons.Rounded.Badge)
-            SunChainTextField(name, { name = it }, "Full name", Modifier.testTag("reg_name"), error = err("name"), leadingIcon = Icons.Rounded.Person)
-            SunChainTextField(email, { email = it }, "Email", Modifier.testTag("reg_email"), error = err("email"), keyboardType = KeyboardType.Email, leadingIcon = Icons.Rounded.Email)
-            SunChainTextField(phone, { phone = it }, "Phone number", Modifier.testTag("reg_phone"), error = err("phone"), keyboardType = KeyboardType.Phone, leadingIcon = Icons.Rounded.Phone)
-            SunChainTextField(password, { password = it }, "Password", Modifier.testTag("reg_password"), error = err("password"), password = true, leadingIcon = Icons.Rounded.Lock)
+            SunChainTextField(nic, { nic = it; vm.clearFieldError("nic") }, "NIC", Modifier.testTag("reg_nic"), error = err("nic"), leadingIcon = Icons.Rounded.Badge)
+            SunChainTextField(name, { name = it; vm.clearFieldError("fullname") }, "Full name", Modifier.testTag("reg_name"), error = err("name"), leadingIcon = Icons.Rounded.Person)
+            SunChainTextField(email, { email = it; vm.clearFieldError("email") }, "Email", Modifier.testTag("reg_email"), error = err("email"), keyboardType = KeyboardType.Email, leadingIcon = Icons.Rounded.Email)
+            SunChainTextField(phone, { phone = it; vm.clearFieldError("phonenumber") }, "Phone number", Modifier.testTag("reg_phone"), error = err("phone"), keyboardType = KeyboardType.Phone, leadingIcon = Icons.Rounded.Phone)
+            SunChainTextField(password, { password = it; vm.clearFieldError("password") }, "Password", Modifier.testTag("reg_password"), error = err("password"), password = true, leadingIcon = Icons.Rounded.Lock)
             SunChainTextField(confirm, { confirm = it }, "Confirm password", Modifier.testTag("reg_confirm"), error = err("confirm"), password = true, leadingIcon = Icons.Rounded.Lock, imeAction = ImeAction.Done)
             Spacer(Modifier.height(Spacing.sm))
             SunChainButton(
                 "Create account",
                 onClick = {
                     submitted = true
-                    if (errors.values.all { it == null }) vm.register(nic, name, email, phone, password)
+                    if (localErrors.values.all { it == null }) vm.register(nic, name, email, phone, password)
                 },
                 modifier = Modifier.fillMaxWidth().testTag("register"),
                 loading = state.busy,
