@@ -6,7 +6,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import lk.smartsolar.microgrid.data.local.SessionStore
 import lk.smartsolar.microgrid.data.remote.AppException
 import lk.smartsolar.microgrid.data.repo.AuthRepository
 import lk.smartsolar.microgrid.data.repo.SyncManager
@@ -27,14 +26,9 @@ object AuthValidation {
 class AuthViewModel(
     private val auth: AuthRepository,
     private val sync: SyncManager,
-    private val settings: SessionStore,
 ) : ViewModel() {
     private val _state = MutableStateFlow(AuthUiState())
     val state: StateFlow<AuthUiState> = _state
-    val serverUrl: StateFlow<String> = settings.baseUrl
-
-    fun setServerUrl(url: String) = settings.setBaseUrl(url)
-
     fun clearError() = _state.update { it.copy(error = null) }
 
     fun login(nic: String, password: String) = run { auth.login(nic, password) }

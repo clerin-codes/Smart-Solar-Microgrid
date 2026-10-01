@@ -123,6 +123,7 @@ class ReservationDetailViewModel(
 
     fun cancel() = act("Reservation cancelled") { repo.cancel(id) }
     fun approve() = act("Reservation approved. QR code generated.") { repo.approve(id) }
+    fun reject() = act("Reservation rejected.") { repo.reject(id) }
     fun complete() = act("Energy transfer completed") { repo.complete(id) }
 
     private fun act(success: String, block: suspend () -> Unit) {
@@ -141,7 +142,7 @@ class ReservationDetailViewModel(
     }
 }
 
-private enum class PendingAction { Cancel, Approve, Complete }
+private enum class PendingAction { Cancel, Approve, Reject, Complete }
 
 @Composable
 fun ReservationDetailScreen(id: String, onBack: () -> Unit, onEdit: (String) -> Unit) {
@@ -211,11 +212,13 @@ fun ReservationDetailScreen(id: String, onBack: () -> Unit, onEdit: (String) -> 
                         canEdit = isProsumer && TimeRules.canEdit(current),
                         canCancel = isProsumer && TimeRules.canCancel(current),
                         canApprove = isOperator && status == ReservationStatus.Pending,
+                        canReject = isOperator && status == ReservationStatus.Pending,
                         canComplete = isOperator && tx == TxStatus.Verified && status != ReservationStatus.Completed,
                         busy = ui.busy,
                         onEdit = { onEdit(id) },
                         onCancel = { confirm = PendingAction.Cancel },
                         onApprove = { confirm = PendingAction.Approve },
+                        onReject = { confirm = PendingAction.Reject },
                         onComplete = { confirm = PendingAction.Complete },
                     )
 
@@ -239,15 +242,17 @@ fun ReservationDetailScreen(id: String, onBack: () -> Unit, onEdit: (String) -> 
         val (title, message, label) = when (action) {
             PendingAction.Cancel -> Triple("Cancel this reservation?", "This cannot be undone.", "Cancel reservation")
             PendingAction.Approve -> Triple("Approve this reservation?", "A QR code will be generated for the prosumer.", "Approve")
+            PendingAction.Reject -> Triple("Reject this reservation?", "This cannot be undone.", "Reject")
             PendingAction.Complete -> Triple("Complete the energy transfer?", "This closes the reservation and cannot be undone.", "Complete transfer")
         }
         ConfirmDialog(
-            title, message, label, busy = ui.busy, destructive = action == PendingAction.Cancel,
+            title, message, label, busy = ui.busy, destructive = action == PendingAction.Cancel || action == PendingAction.Reject,
             onDismiss = { confirm = null },
             onConfirm = {
                 when (action) {
                     PendingAction.Cancel -> vm.cancel()
                     PendingAction.Approve -> vm.approve()
+                    PendingAction.Reject -> vm.reject()
                     PendingAction.Complete -> vm.complete()
                 }
                 confirm = null
@@ -298,18 +303,21 @@ private fun Actions(
     canEdit: Boolean,
     canCancel: Boolean,
     canApprove: Boolean,
+    canReject: Boolean,
     canComplete: Boolean,
     busy: Boolean,
     onEdit: () -> Unit,
     onCancel: () -> Unit,
     onApprove: () -> Unit,
+    onReject: () -> Unit,
     onComplete: () -> Unit,
 ) {
-    if (!(canEdit || canCancel || canApprove || canComplete)) return
+    if (!(canEdit || canCancel || canApprove || canReject || canComplete)) return
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
         if (canEdit) SunChainButton("Edit", onEdit, Modifier.weight(1f).testTag("edit"), kind = ButtonKind.Secondary, enabled = !busy)
         if (canCancel) SunChainButton("Cancel", onCancel, Modifier.weight(1f).testTag("cancel"), kind = ButtonKind.Danger, enabled = !busy)
         if (canApprove) SunChainButton("Approve", onApprove, Modifier.weight(1f).testTag("approve"), kind = ButtonKind.Success, enabled = !busy)
+        if (canReject) SunChainButton("Reject", onReject, Modifier.weight(1f).testTag("reject"), kind = ButtonKind.Danger, enabled = !busy)
         if (canComplete) SunChainButton("Complete transfer", onComplete, Modifier.weight(1f).testTag("complete"), kind = ButtonKind.Success, enabled = !busy)
     }
 }

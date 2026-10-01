@@ -1,6 +1,15 @@
+/*
+ * File: ReservationService.cs
+ * Project: Smart Solar Microgrid
+ * Description: Enforces reservation, approval, QR, and transfer business rules.
+ * Author: Clerin - IT23402584
+ * Author: Thuverakan - IT23281332
+ */
+
 using System.Security.Cryptography;
 
 using SmartSolarMicrogrid.Api.DTOs.Reservations;
+using SmartSolarMicrogrid.Api.Exceptions;
 using SmartSolarMicrogrid.Api.Interfaces.Repositories;
 using SmartSolarMicrogrid.Api.Interfaces.Services;
 using SmartSolarMicrogrid.Api.Models;
@@ -34,6 +43,8 @@ public class ReservationService : IReservationService
         ISlotRepository slotRepository,
         IUserRepository userRepository)
     {
+        // Responsible: Clerin - IT23402584
+        // Store repositories used to enforce reservation workflow rules.
         _reservationRepository = reservationRepository;
         _stationRepository = stationRepository;
         _slotRepository = slotRepository;
@@ -46,6 +57,8 @@ public class ReservationService : IReservationService
 
     private static DateTime GetSriLankaNow()
     {
+        // Responsible: Clerin - IT23402584
+        // Return the current wall-clock time in Sri Lanka.
         return TimeZoneInfo.ConvertTimeFromUtc(
             DateTime.UtcNow,
             SriLankaTimeZone);
@@ -53,11 +66,15 @@ public class ReservationService : IReservationService
 
     private static DateTime GetSriLankaToday()
     {
+        // Responsible: Clerin - IT23402584
+        // Return today's Sri Lankan calendar date.
         return GetSriLankaNow().Date;
     }
 
     private static DateTime GetSriLankaDate(DateTime dateTime)
     {
+        // Responsible: Clerin - IT23402584
+        // Normalize the supplied timestamp to a Sri Lankan calendar date.
         if (dateTime.Kind == DateTimeKind.Utc)
         {
             return TimeZoneInfo
@@ -90,6 +107,8 @@ public class ReservationService : IReservationService
         string prosumerNIC,
         CreateReservationDto request)
     {
+        // Responsible: Clerin - IT23402584
+        // Validate the prosumer, station, and slot before creating a reservation.
         // =====================================================
         // CHECK PROSUMER
         // =====================================================
@@ -267,6 +286,9 @@ public class ReservationService : IReservationService
                 SlotId =
                     request.SlotId,
 
+                ActiveSlotKey =
+                    $"{request.SlotId}:{requestedDateInSriLanka:yyyy-MM-dd}",
+
                 ReservationDate =
                     requestedDateInSriLanka,
 
@@ -289,8 +311,17 @@ public class ReservationService : IReservationService
                     DateTime.UtcNow
             };
 
-        await _reservationRepository
-            .CreateAsync(reservation);
+        try
+        {
+            await _reservationRepository
+                .CreateAsync(reservation);
+        }
+        catch (MongoDB.Driver.MongoWriteException exception)
+            when (exception.WriteError?.Category == MongoDB.Driver.ServerErrorCategory.DuplicateKey)
+        {
+            throw new ConflictException(
+                "This energy slot was reserved by another request. Please select another available slot.");
+        }
 
         return reservation;
     }
@@ -302,6 +333,8 @@ public class ReservationService : IReservationService
     public async Task<EnergyReservation?> GetByIdAsync(
         string id)
     {
+        // Responsible: Clerin - IT23402584
+        // Return a reservation by its identifier.
         return await _reservationRepository
             .GetByIdAsync(id);
     }
@@ -314,6 +347,8 @@ public class ReservationService : IReservationService
         GetMyReservationsAsync(
             string prosumerNIC)
     {
+        // Responsible: Clerin - IT23402584
+        // Return all reservations owned by the supplied prosumer.
         return await _reservationRepository
             .GetByProsumerAsync(prosumerNIC);
     }
@@ -325,6 +360,8 @@ public class ReservationService : IReservationService
     public async Task<List<EnergyReservation>>
         GetAllReservationsAsync()
     {
+        // Responsible: Clerin - IT23402584
+        // Return all reservations for grid-operator review.
         return await _reservationRepository
             .GetAllAsync();
     }
@@ -338,6 +375,8 @@ public class ReservationService : IReservationService
         string reservationId,
         UpdateReservationDto request)
     {
+        // Responsible: Clerin - IT23402584
+        // Validate and move a pending reservation to another available slot.
         // =====================================================
         // FIND RESERVATION
         // =====================================================
@@ -522,6 +561,9 @@ public class ReservationService : IReservationService
         reservation.SlotId =
             request.SlotId;
 
+        reservation.ActiveSlotKey =
+            $"{request.SlotId}:{requestedDateInSriLanka:yyyy-MM-dd}";
+
         reservation.ReservationDate =
             requestedDateInSriLanka;
 
@@ -534,8 +576,17 @@ public class ReservationService : IReservationService
         reservation.UpdatedAt =
             DateTime.UtcNow;
 
-        await _reservationRepository
-            .UpdateAsync(reservation);
+        try
+        {
+            await _reservationRepository
+                .UpdateAsync(reservation);
+        }
+        catch (MongoDB.Driver.MongoWriteException exception)
+            when (exception.WriteError?.Category == MongoDB.Driver.ServerErrorCategory.DuplicateKey)
+        {
+            throw new ConflictException(
+                "This energy slot was reserved by another request. Please select another available slot.");
+        }
 
         return reservation;
     }
@@ -548,6 +599,8 @@ public class ReservationService : IReservationService
         string prosumerNIC,
         string reservationId)
     {
+        // Responsible: Clerin - IT23402584
+        // Validate and cancel an eligible prosumer reservation.
         // =====================================================
         // FIND RESERVATION
         // =====================================================
@@ -625,6 +678,9 @@ public class ReservationService : IReservationService
         reservation.Status =
             ReservationStatus.Cancelled;
 
+        reservation.ActiveSlotKey =
+            null;
+
         reservation.UpdatedAt =
             DateTime.UtcNow;
 
@@ -640,6 +696,8 @@ public async Task<EnergyReservation> RejectAsync(
     string operatorNIC,
     string reservationId)
 {
+    // Responsible: Clerin - IT23402584
+    // Validate the operator and transition a pending reservation to rejected.
     // =====================================================
     // CHECK OPERATOR
     // =====================================================
@@ -699,6 +757,9 @@ public async Task<EnergyReservation> RejectAsync(
     reservation.Status =
         ReservationStatus.Rejected;
 
+    reservation.ActiveSlotKey =
+        null;
+
     reservation.UpdatedAt =
         DateTime.UtcNow;
 
@@ -716,6 +777,8 @@ public async Task<EnergyReservation> RejectAsync(
         string operatorNIC,
         string reservationId)
     {
+        // Responsible: Thuverakan - IT23281332
+        // Validate the operator and approve a pending reservation with a QR token.
         // =====================================================
         // CHECK OPERATOR
         // =====================================================
@@ -797,6 +860,8 @@ public async Task<EnergyReservation> RejectAsync(
         string operatorNIC,
         string qrToken)
     {
+        // Responsible: Thuverakan - IT23281332
+        // Validate the operator and mark the QR-backed transaction as verified.
         // =====================================================
         // CHECK OPERATOR
         // =====================================================
@@ -877,6 +942,8 @@ public async Task<EnergyReservation> RejectAsync(
         string operatorNIC,
         string reservationId)
     {
+        // Responsible: Thuverakan - IT23281332
+        // Validate the operator and complete a verified energy transfer.
         // =====================================================
         // CHECK OPERATOR
         // =====================================================
@@ -936,6 +1003,9 @@ public async Task<EnergyReservation> RejectAsync(
         reservation.Status =
             ReservationStatus.Completed;
 
+        reservation.ActiveSlotKey =
+            null;
+
         reservation.TransactionStatus =
             TransactionStatus.Completed;
 
@@ -960,6 +1030,8 @@ public async Task<EnergyReservation> RejectAsync(
 
     private static string GenerateReservationNumber()
     {
+        // Responsible: Clerin - IT23402584
+        // Generate a readable, time-based reservation reference.
         return
             $"RES-{DateTime.UtcNow:yyyyMMddHHmmss}-{RandomNumberGenerator.GetInt32(1000, 9999)}";
     }
@@ -970,6 +1042,8 @@ public async Task<EnergyReservation> RejectAsync(
 
     private static string GenerateSecureQRToken()
     {
+        // Responsible: Thuverakan - IT23281332
+        // Generate a cryptographically secure token for reservation verification.
         var bytes =
             RandomNumberGenerator.GetBytes(32);
 

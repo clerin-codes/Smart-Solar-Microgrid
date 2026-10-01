@@ -14,27 +14,8 @@ const apiClient = axios.create({
 })
 
 apiClient.interceptors.request.use(
-  async (config) => {
-    let token = localStorage.getItem('accessToken')
-
-    // DEV ONLY: Auto login if no token and not trying to login
-    if (!token && !config.url.includes('/Auth/login')) {
-      try {
-        const response = await axios.post(
-          `${API_BASE_URL}/Auth/login`,
-          {
-            nic: '200000000001',
-            password: 'Admin@123',
-          }
-        )
-        token = response.data.token
-        localStorage.setItem('accessToken', token)
-        console.log('DEV: Auto-logged in as Backoffice Admin')
-      } catch (e) {
-        console.error('DEV: Auto-login failed', e)
-      }
-    }
-
+  (config) => {
+    const token = localStorage.getItem('accessToken')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -44,6 +25,18 @@ apiClient.interceptors.request.use(
   (error) => {
     return Promise.reject(error)
   }
+)
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('authUser')
+      window.dispatchEvent(new Event('auth:expired'))
+    }
+    return Promise.reject(error)
+  },
 )
 
 export default apiClient

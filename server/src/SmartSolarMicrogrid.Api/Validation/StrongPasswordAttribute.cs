@@ -1,6 +1,6 @@
 /*
  * Smart Solar Microgrid Trading System
- * Member 1 - Authentication and Accounts
+ * Author: Shakanyah - IT23214002
  * File: StrongPasswordAttribute.cs
  * Purpose: Provides reusable server-side strong password validation.
  */
@@ -13,6 +13,7 @@ public class StrongPasswordAttribute : ValidationAttribute
 {
     public StrongPasswordAttribute()
     {
+        // Responsible: Shakanyah - IT23214002
         // Provide a general fallback validation message.
         ErrorMessage =
             "Password does not meet the required security policy.";
@@ -22,6 +23,7 @@ public class StrongPasswordAttribute : ValidationAttribute
         object? value,
         ValidationContext validationContext)
     {
+        // Responsible: Shakanyah - IT23214002
         // RequiredAttribute is responsible for missing/null values.
         if (value == null)
         {

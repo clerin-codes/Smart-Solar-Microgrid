@@ -1,3 +1,10 @@
+/*
+ * File: SlotsController.cs
+ * Project: Smart Solar Microgrid
+ * Description: Exposes energy booking slot query and management endpoints.
+ * Author: Sithmi - IT23241114
+ */
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartSolarMicrogrid.Api.DTOs.Slots;
@@ -15,6 +22,8 @@ public class SlotsController : ControllerBase
     public SlotsController(
         ISlotService slotService)
     {
+        // Responsible: Sithmi - IT23241114
+        // Store the slot service used by each endpoint.
         _slotService = slotService;
     }
 
@@ -23,6 +32,8 @@ public class SlotsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
+        // Responsible: Sithmi - IT23241114
+        // Return all configured energy booking slots.
         var slots =
             await _slotService.GetAllAsync();
 
@@ -35,6 +46,8 @@ public class SlotsController : ControllerBase
     public async Task<IActionResult> GetById(
         string id)
     {
+        // Responsible: Sithmi - IT23241114
+        // Return the slot identified by the route value when it exists.
         var slot =
             await _slotService.GetByIdAsync(id);
 
@@ -55,6 +68,8 @@ public class SlotsController : ControllerBase
     public async Task<IActionResult> GetByStation(
         string stationId)
     {
+        // Responsible: Sithmi - IT23241114
+        // Return all booking slots belonging to the selected station.
         var slots =
             await _slotService
                 .GetByStationAsync(stationId);
@@ -69,6 +84,8 @@ public class SlotsController : ControllerBase
     public async Task<IActionResult> Create(
         [FromBody] CreateSlotDto request)
     {
+        // Responsible: Sithmi - IT23241114
+        // Create a new energy booking slot from the validated request.
         var slot =
             await _slotService.CreateAsync(request);
 
@@ -86,6 +103,8 @@ public class SlotsController : ControllerBase
         string id,
         [FromBody] UpdateSlotDto request)
     {
+        // Responsible: Sithmi - IT23241114
+        // Update the selected energy booking slot from the validated request.
         var slot =
             await _slotService.UpdateAsync(
                 id,

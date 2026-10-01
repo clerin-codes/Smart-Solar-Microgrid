@@ -1,3 +1,10 @@
+/*
+ * File: SlotService.cs
+ * Project: Smart Solar Microgrid
+ * Description: Implements energy booking slot business operations.
+ * Author: Sithmi - IT23241114
+ */
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,24 +24,32 @@ public class SlotService : ISlotService
         ISlotRepository slotRepository,
         IStationRepository stationRepository)
     {
+        // Responsible: Sithmi - IT23241114
+        // Store repositories used for slot and station validation.
         _slotRepository = slotRepository;
         _stationRepository = stationRepository;
     }
 
     public async Task<List<EnergyBookingSlot>> GetAllAsync()
     {
+        // Responsible: Sithmi - IT23241114
+        // Return every configured energy booking slot.
         return await _slotRepository.GetAllAsync();
     }
 
     public async Task<EnergyBookingSlot?> GetByIdAsync(
         string id)
     {
+        // Responsible: Sithmi - IT23241114
+        // Return a booking slot by its identifier.
         return await _slotRepository.GetByIdAsync(id);
     }
 
     public async Task<List<EnergyBookingSlot>> GetByStationAsync(
         string stationId)
     {
+        // Responsible: Sithmi - IT23241114
+        // Return all booking slots belonging to the selected station.
         return await _slotRepository
             .GetByStationAsync(stationId);
     }
@@ -42,6 +57,8 @@ public class SlotService : ISlotService
     public async Task<EnergyBookingSlot> CreateAsync(
         CreateSlotDto request)
     {
+        // Responsible: Sithmi - IT23241114
+        // Validate the station and request before creating a booking slot.
         // Check station exists
         var station =
             await _stationRepository.GetByIdAsync(
@@ -129,6 +146,8 @@ public class SlotService : ISlotService
         string id,
         UpdateSlotDto request)
     {
+        // Responsible: Sithmi - IT23241114
+        // Validate and update an existing energy booking slot.
         // Check slot exists
         var slot =
             await _slotRepository.GetByIdAsync(id);
@@ -221,6 +240,8 @@ public class SlotService : ISlotService
     // New method to retrieve available slots with optional filters
     public async Task<List<EnergyBookingSlot>> GetAvailableSlotsAsync(string? stationId = null, DateTime? date = null)
     {
+        // Responsible: Sithmi - IT23241114
+        // Filter available slots by optional station and date criteria.
         var allSlots = await _slotRepository.GetAllAsync();
         var query = allSlots.AsQueryable()
             .Where(s => s.Status == SlotStatus.Available && s.AvailableCapacityKw > 0);

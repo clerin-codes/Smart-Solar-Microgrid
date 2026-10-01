@@ -18,6 +18,11 @@ export const approveReservation = async (id) => {
   return response.data
 }
 
+export const rejectReservation = async (id) => {
+  const response = await apiClient.post(`/Reservations/${id}/reject`)
+  return response.data
+}
+
 export const getMyReservations = async () => {
   const response = await apiClient.get('/Reservations/my')
   return response.data

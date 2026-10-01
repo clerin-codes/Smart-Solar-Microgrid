@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   getReservationById,
   approveReservation,
+  rejectReservation,
 } from '../../services/api/reservationService'
 
 const RESERVATION_STATUS = {
@@ -89,6 +90,7 @@ function ReservationDetails() {
   const [loading, setLoading] = useState(true)
 
   const [approving, setApproving] = useState(false)
+  const [rejecting, setRejecting] = useState(false)
 
   const [error, setError] = useState('')
   const [approveError, setApproveError] = useState('')
@@ -162,6 +164,21 @@ function ReservationDetails() {
       setApproveError(message)
     } finally {
       setApproving(false)
+    }
+  }
+
+  const handleReject = async () => {
+    try {
+      setRejecting(true)
+      setApproveError('')
+      setSuccessMessage('')
+      await rejectReservation(id)
+      setSuccessMessage('Reservation rejected successfully.')
+      await loadReservation()
+    } catch (err) {
+      setApproveError(err?.response?.data?.message || 'Unable to reject reservation.')
+    } finally {
+      setRejecting(false)
     }
   }
 
@@ -512,7 +529,7 @@ function ReservationDetails() {
           <button
             type="button"
             onClick={handleApprove}
-            disabled={approving}
+            disabled={approving || rejecting}
             className={`px-5 py-2.5 text-white rounded-lg transition font-medium ${
               approving
                 ? 'bg-blue-400 cursor-not-allowed'
@@ -522,6 +539,17 @@ function ReservationDetails() {
             {approving
               ? 'Approving...'
               : 'Approve Reservation'}
+          </button>
+        )}
+
+        {reservation.status === 0 && (
+          <button
+            type="button"
+            onClick={handleReject}
+            disabled={rejecting || approving}
+            className="rounded-lg bg-red-600 px-5 py-2.5 font-medium text-white transition hover:bg-red-700 disabled:opacity-60"
+          >
+            {rejecting ? 'Rejecting...' : 'Reject Reservation'}
           </button>
         )}
 

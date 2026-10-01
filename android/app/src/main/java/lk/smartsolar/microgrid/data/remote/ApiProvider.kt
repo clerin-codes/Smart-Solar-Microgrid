@@ -24,9 +24,9 @@ private class AuthInterceptor(private val session: SessionStore) : Interceptor {
         session.token?.let { builder.header("Authorization", "Bearer $it") }
         val response = chain.proceed(builder.build())
 
-        // A rejected/expired JWT gives an empty 401; business-rule errors carry a JSON message.
+        // Any authenticated request rejected with 401 has an invalid or expired JWT.
         val isLogin = chain.request().url.encodedPath.endsWith("/auth/login")
-        if (response.code == 401 && !isLogin && session.token != null && response.header("Content-Length") == "0") {
+        if (response.code == 401 && !isLogin && chain.request().header("Authorization") != null) {
             session.clear()
         }
         return response

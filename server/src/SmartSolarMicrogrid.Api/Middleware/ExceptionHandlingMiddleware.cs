@@ -1,6 +1,9 @@
 /*
  * Smart Solar Microgrid Trading System
- * Member 1 - Authentication and Accounts
+ * Author: Shakanyah - IT23214002
+ * Author: Sithmi - IT23241114
+ * Author: Clerin - IT23402584
+ * Author: Thuverakan - IT23281332
  * File: ExceptionHandlingMiddleware.cs
  * Purpose: Converts application exceptions into consistent
  *          HTTP status codes and JSON error responses.
@@ -21,6 +24,7 @@ public class ExceptionHandlingMiddleware
         RequestDelegate next,
         ILogger<ExceptionHandlingMiddleware> logger)
     {
+        // Responsible: Shakanyah - IT23214002; Sithmi - IT23241114; Clerin - IT23402584; Thuverakan - IT23281332
         // Store middleware dependencies.
         _next = next;
         _logger = logger;
@@ -29,6 +33,7 @@ public class ExceptionHandlingMiddleware
     public async Task InvokeAsync(
         HttpContext context)
     {
+        // Responsible: Shakanyah - IT23214002; Sithmi - IT23241114; Clerin - IT23402584; Thuverakan - IT23281332
         // Continue the request pipeline and convert known exceptions to HTTP responses.
         try
         {
@@ -88,6 +93,7 @@ public class ExceptionHandlingMiddleware
         HttpStatusCode statusCode,
         string message)
     {
+        // Responsible: Shakanyah - IT23214002; Sithmi - IT23241114; Clerin - IT23402584; Thuverakan - IT23281332
         // Return a consistent JSON error payload to web and Android clients.
         context.Response.StatusCode =
             (int)statusCode;

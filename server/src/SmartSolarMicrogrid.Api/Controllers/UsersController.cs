@@ -1,6 +1,6 @@
 /*
  * Smart Solar Microgrid Trading System
- * Member 1 - Authentication and Accounts
+ * Author: Shakanyah - IT23214002
  * File: UsersController.cs
  * Purpose: Provides Backoffice user and Prosumer administration APIs.
  */
@@ -24,6 +24,7 @@ public class UsersController : ControllerBase
     public UsersController(
         IUserService userService)
     {
+        // Responsible: Shakanyah - IT23214002
         // Store account-management service.
         _userService = userService;
     }
@@ -33,6 +34,7 @@ public class UsersController : ControllerBase
         [FromQuery] UserRole? role = null,
         [FromQuery] AccountStatus? status = null)
     {
+        // Responsible: Shakanyah - IT23214002
         // Retrieve users with optional role/status filtering.
         var users =
             await _userService.GetAllAsync(
@@ -46,6 +48,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult>
         GetPendingActivations()
     {
+        // Responsible: Shakanyah - IT23214002
         // Retrieve Prosumer registrations awaiting approval.
         var users =
             await _userService
@@ -58,6 +61,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult>
         GetDeactivationRequests()
     {
+        // Responsible: Shakanyah - IT23214002
         // Retrieve Prosumer account-deactivation requests.
         var users =
             await _userService
@@ -70,6 +74,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> GetByNIC(
         string nic)
     {
+        // Responsible: Shakanyah - IT23214002
         // Retrieve one account by NIC.
         var user =
             await _userService.GetByNICAsync(nic);
@@ -81,6 +86,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> Create(
         [FromBody] CreateUserDto request)
     {
+        // Responsible: Shakanyah - IT23214002
         // Create an account through Backoffice.
         var user =
             await _userService.CreateAsync(request);
@@ -99,6 +105,7 @@ public class UsersController : ControllerBase
         string nic,
         [FromBody] UpdateUserDto request)
     {
+        // Responsible: Shakanyah - IT23214002
         // Update a managed account.
         var user =
             await _userService.UpdateAsync(
@@ -112,6 +119,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> Activate(
         string nic)
     {
+        // Responsible: Shakanyah - IT23214002
         // Approve a pending Prosumer account.
         var user =
             await _userService.ActivateAsync(nic);
@@ -129,6 +137,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> Deactivate(
         string nic)
     {
+        // Responsible: Shakanyah - IT23214002
         // Deactivate an account through Backoffice.
         var user =
             await _userService.DeactivateAsync(nic);
@@ -146,6 +155,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> Reactivate(
         string nic)
     {
+        // Responsible: Shakanyah - IT23214002
         // Reactivate an inactive account through Backoffice.
         var user =
             await _userService.ReactivateAsync(nic);

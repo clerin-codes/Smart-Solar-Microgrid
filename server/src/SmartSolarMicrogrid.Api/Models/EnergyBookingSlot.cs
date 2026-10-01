@@ -1,3 +1,10 @@
+/*
+ * File: EnergyBookingSlot.cs
+ * Project: Smart Solar Microgrid
+ * Description: Models an energy booking slot stored in MongoDB.
+ * Author: Sithmi - IT23241114
+ */
+
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 

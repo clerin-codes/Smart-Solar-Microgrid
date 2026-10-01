@@ -138,6 +138,9 @@ interface ApiService {
     @POST("reservations/{id}/approve")
     suspend fun approve(@Path("id") id: String): ReservationDto
 
+    @POST("reservations/{id}/reject")
+    suspend fun reject(@Path("id") id: String): ReservationDto
+
     // The endpoint reads a bare JSON string from the body.
     @POST("reservations/verify-qr")
     suspend fun verifyQr(@Body qrToken: String): ReservationDto

@@ -1,3 +1,11 @@
+/*
+ * File: ReservationRepository.cs
+ * Project: Smart Solar Microgrid
+ * Description: Persists and queries energy reservations in MongoDB.
+ * Author: Clerin - IT23402584
+ * Author: Thuverakan - IT23281332
+ */
+
 using MongoDB.Driver;
 using SmartSolarMicrogrid.Api.Interfaces.Repositories;
 using SmartSolarMicrogrid.Api.Models;
@@ -10,8 +18,39 @@ public class ReservationRepository : IReservationRepository
 
     public ReservationRepository(IMongoDatabase database)
     {
+        // Responsible: Clerin - IT23402584
+        // Resolve the MongoDB reservation collection.
         _collection = database.GetCollection<EnergyReservation>(
             "EnergyReservation");
+    }
+
+    public async Task EnsureIndexesAsync()
+    {
+        // Responsible: Clerin - IT23402584
+        // Enforce one active lock per slot/day and unique non-null QR tokens in MongoDB.
+        var indexes = new[]
+        {
+            new CreateIndexModel<EnergyReservation>(
+                Builders<EnergyReservation>.IndexKeys.Ascending(x => x.ActiveSlotKey),
+                new CreateIndexOptions
+                {
+                    Name = "ux_reservation_active_slot_key",
+                    Unique = true,
+                    Sparse = true
+                }),
+            new CreateIndexModel<EnergyReservation>(
+                Builders<EnergyReservation>.IndexKeys.Ascending(x => x.QRToken),
+                new CreateIndexOptions<EnergyReservation>
+                {
+                    Name = "ux_reservation_qr_token",
+                    Unique = true,
+                    PartialFilterExpression = Builders<EnergyReservation>.Filter.Type(
+                        x => x.QRToken,
+                        MongoDB.Bson.BsonType.String)
+                })
+        };
+
+        await _collection.Indexes.CreateManyAsync(indexes);
     }
 
     // ======================================================
@@ -20,6 +59,8 @@ public class ReservationRepository : IReservationRepository
 
     public async Task<List<EnergyReservation>> GetAllAsync()
     {
+        // Responsible: Clerin - IT23402584
+        // Return every reservation stored in MongoDB.
         return await _collection
             .Find(_ => true)
             .ToListAsync();
@@ -33,6 +74,8 @@ public class ReservationRepository : IReservationRepository
     public async Task<EnergyReservation?> GetByIdAsync(
         string id)
     {
+        // Responsible: Clerin - IT23402584
+        // Find a reservation by its MongoDB identifier.
         return await _collection
             .Find(x => x.Id == id)
             .FirstOrDefaultAsync();
@@ -46,6 +89,8 @@ public class ReservationRepository : IReservationRepository
     public async Task<List<EnergyReservation>> GetByProsumerAsync(
         string nic)
     {
+        // Responsible: Clerin - IT23402584
+        // Return all reservations owned by the supplied prosumer NIC.
         return await _collection
             .Find(x => x.ProsumerNIC == nic)
             .ToListAsync();
@@ -62,6 +107,8 @@ public class ReservationRepository : IReservationRepository
             string slotId,
             DateTime reservationDate)
     {
+        // Responsible: Clerin - IT23402584
+        // Find an active reservation for the prosumer, slot, and calendar day.
         // Start of requested day
         var startOfDay =
             reservationDate.Date;
@@ -119,6 +166,8 @@ public class ReservationRepository : IReservationRepository
             string slotId,
             DateTime reservationDate)
     {
+        // Responsible: Clerin - IT23402584
+        // Find an active reservation occupying the slot on the requested day.
         // Start of requested day
         var startOfDay =
             reservationDate.Date;
@@ -169,6 +218,8 @@ public class ReservationRepository : IReservationRepository
     public async Task<bool> HasActiveReservationForStationAsync(
         string stationId)
     {
+        // Responsible: Clerin - IT23402584
+        // Determine whether a station has any reservation that is still active.
         var filter =
             Builders<EnergyReservation>.Filter.And(
 
@@ -201,6 +252,8 @@ public class ReservationRepository : IReservationRepository
     public async Task CreateAsync(
         EnergyReservation reservation)
     {
+        // Responsible: Clerin - IT23402584
+        // Insert a new reservation document.
         await _collection.InsertOneAsync(
             reservation);
     }
@@ -213,6 +266,8 @@ public class ReservationRepository : IReservationRepository
     public async Task UpdateAsync(
         EnergyReservation reservation)
     {
+        // Responsible: Clerin - IT23402584
+        // Replace the stored reservation document with its updated state.
         await _collection.ReplaceOneAsync(
             x => x.Id == reservation.Id,
             reservation);

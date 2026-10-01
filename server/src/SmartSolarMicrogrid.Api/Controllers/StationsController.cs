@@ -1,3 +1,10 @@
+/*
+ * File: StationsController.cs
+ * Project: Smart Solar Microgrid
+ * Description: Exposes solar station query and management endpoints.
+ * Author: Sithmi - IT23241114
+ */
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartSolarMicrogrid.Api.DTOs.Stations;
@@ -15,6 +22,8 @@ public class StationsController : ControllerBase
     public StationsController(
         IStationService stationService)
     {
+        // Responsible: Sithmi - IT23241114
+        // Store the station service used by each endpoint.
         _stationService = stationService;
     }
 
@@ -23,6 +32,8 @@ public class StationsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
+        // Responsible: Sithmi - IT23241114
+        // Return all solar stations visible to authenticated users.
         var stations =
             await _stationService.GetAllAsync();
 
@@ -35,6 +46,8 @@ public class StationsController : ControllerBase
     public async Task<IActionResult> GetById(
         string id)
     {
+        // Responsible: Sithmi - IT23241114
+        // Return the station identified by the route value when it exists.
         var station =
             await _stationService.GetByIdAsync(id);
 
@@ -56,6 +69,8 @@ public class StationsController : ControllerBase
     public async Task<IActionResult> Create(
         [FromBody] CreateStationDto request)
     {
+        // Responsible: Sithmi - IT23241114
+        // Create a new solar station from the validated request.
         var station =
             await _stationService.CreateAsync(request);
 
@@ -73,6 +88,8 @@ public class StationsController : ControllerBase
         string id,
         [FromBody] UpdateStationDto request)
     {
+        // Responsible: Sithmi - IT23241114
+        // Update the selected solar station from the validated request.
         var station =
             await _stationService.UpdateAsync(
                 id,
@@ -88,6 +105,8 @@ public class StationsController : ControllerBase
     public async Task<IActionResult> Deactivate(
         string id)
     {
+        // Responsible: Sithmi - IT23241114
+        // Deactivate the selected station after service-level validation.
         await _stationService.DeactivateAsync(id);
 
         return Ok(new

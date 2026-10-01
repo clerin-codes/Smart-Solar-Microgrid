@@ -1,6 +1,9 @@
 /*
  * Smart Solar Microgrid Trading System
- * Member 1 - Authentication and Accounts
+ * Author: Shakanyah - IT23214002
+ * Author: Sithmi - IT23241114
+ * Author: Clerin - IT23402584
+ * Author: Thuverakan - IT23281332
  * File: Program.cs
  * Purpose: Configures MongoDB, JWT authentication, authorization,
  *          dependency injection, Swagger, validation, CORS, seed data,
@@ -542,7 +545,15 @@ using (var scope =
             .GetRequiredService<
                 IUserRepository>();
 
+    var reservationRepository =
+        scope.ServiceProvider
+            .GetRequiredService<
+                IReservationRepository>();
+
     await userRepository
+        .EnsureIndexesAsync();
+
+    await reservationRepository
         .EnsureIndexesAsync();
 }
 

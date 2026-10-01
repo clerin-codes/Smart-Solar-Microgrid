@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import lk.smartsolar.microgrid.data.local.AppDatabase
 import lk.smartsolar.microgrid.data.local.FavoriteEntity
+import lk.smartsolar.microgrid.data.local.LocalUserEntity
 import lk.smartsolar.microgrid.data.local.ReservationEntity
 import lk.smartsolar.microgrid.data.local.Session
 import lk.smartsolar.microgrid.data.local.SessionStore
@@ -28,10 +29,17 @@ class AuthRepository(
 ) {
     val current get() = session.session
 
-    private fun startSession(nic: String, fullName: String, role: String, token: String): Session {
+    fun cachedProfile(nic: String): Flow<LocalUserEntity?> = db.users().observe(nic)
+
+    private suspend fun startSession(nic: String, fullName: String, role: String, token: String): Session {
         if (role == Session.ROLE_BACKOFFICE) {
             throw AppException("Admin accounts use the SunChain web portal. This app is for Prosumers and Grid Operators.")
         }
+        val previous = db.users().get(nic)
+        db.users().insert(
+            (previous ?: LocalUserEntity(nic = nic, fullName = fullName, role = role))
+                .copy(fullName = fullName, role = role, cachedAt = System.currentTimeMillis()),
+        )
         return Session(token, nic, fullName, role).also { session.save(it) }
     }
 
@@ -45,18 +53,35 @@ class AuthRepository(
         return startSession(r.nic, r.fullName, r.role, r.token)
     }
 
-    suspend fun profile(): ProfileDto = api.call { it.profile() }.also { session.setProfileImage(it.profileImage) }
+    suspend fun profile(): ProfileDto = api.call { it.profile() }.also { cacheProfile(it) }
 
     suspend fun uploadProfileImage(base64: String): ProfileDto =
-        api.call { it.uploadProfileImage(ProfileImageRequest(base64)) }.also { session.setProfileImage(it.profileImage) }
+        api.call { it.uploadProfileImage(ProfileImageRequest(base64)) }.also { cacheProfile(it) }
 
     suspend fun removeProfileImage(): ProfileDto =
-        api.call { it.removeProfileImage() }.also { session.setProfileImage(it.profileImage) }
+        api.call { it.removeProfileImage() }.also { cacheProfile(it) }
 
     suspend fun updateProfile(fullName: String, email: String, phone: String): ProfileDto {
         val updated = api.call { it.updateProfile(UpdateProfileRequest(fullName.trim(), email.trim(), phone.trim())) }
         session.updateName(updated.fullName)
+        cacheProfile(updated)
         return updated
+    }
+
+    private suspend fun cacheProfile(profile: ProfileDto) {
+        db.users().insert(
+            LocalUserEntity(
+                nic = profile.nic,
+                fullName = profile.fullName,
+                email = profile.email,
+                phoneNumber = profile.phoneNumber,
+                role = profile.role,
+                isActive = profile.isActive,
+                profileImage = profile.profileImage,
+                cachedAt = System.currentTimeMillis(),
+            ),
+        )
+        session.setProfileImage(profile.profileImage)
     }
 
     /** Signs out and wipes everything cached for this user. */
@@ -132,6 +157,13 @@ class ReservationRepository(
     }
 
     suspend fun approve(id: String): ReservationEntity = store(api.call { it.approve(id) }.toEntity())
+
+    /** Rejects on the server first, then persists and refreshes the confirmed state. */
+    suspend fun reject(id: String): ReservationEntity {
+        val rejected = store(api.call { it.reject(id) }.toEntity())
+        runCatching { refreshOne(id) }
+        return rejected
+    }
 
     suspend fun verifyQr(token: String): ReservationEntity = store(api.call { it.verifyQr(token.trim()) }.toEntity())
 

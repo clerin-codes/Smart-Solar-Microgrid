@@ -16,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.HourglassTop
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.TaskAlt
@@ -82,6 +83,7 @@ fun OperatorDashboardScreen(onScan: () -> Unit, onOpen: (String) -> Unit, onProf
     val names by vm.stationNames.collectAsState()
     val ui by vm.ui.collectAsState()
     val approving by vm.approving.collectAsState()
+    val rejecting by vm.rejecting.collectAsState()
     val snackbar = LocalSnackbar.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val fullName = session?.fullName.orEmpty()
@@ -139,12 +141,20 @@ fun OperatorDashboardScreen(onScan: () -> Unit, onOpen: (String) -> Unit, onProf
                     ReservationCard(
                         r, names[r.stationId] ?: "Station", onClick = { onOpen(r.id) }, showNic = true,
                         footer = {
-                            SunChainButton(
-                                if (approving == r.id) "Approving..." else "Approve",
-                                onClick = { vm.approve(r.id) },
-                                modifier = Modifier.fillMaxWidth().testTag("approve_${r.number}"),
-                                kind = ButtonKind.Success, enabled = approving == null, icon = Icons.Rounded.CheckCircle, compact = true,
-                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                                SunChainButton(
+                                    if (approving == r.id) "Approving..." else "Approve",
+                                    onClick = { vm.approve(r.id) },
+                                    modifier = Modifier.weight(1f).testTag("approve_${r.number}"),
+                                    kind = ButtonKind.Success, enabled = approving == null && rejecting == null, icon = Icons.Rounded.CheckCircle, compact = true,
+                                )
+                                SunChainButton(
+                                    if (rejecting == r.id) "Rejecting..." else "Reject",
+                                    onClick = { vm.reject(r.id) },
+                                    modifier = Modifier.weight(1f).testTag("reject_${r.number}"),
+                                    kind = ButtonKind.Danger, enabled = approving == null && rejecting == null, icon = Icons.Rounded.Close, compact = true,
+                                )
+                            }
                         },
                     )
                 }

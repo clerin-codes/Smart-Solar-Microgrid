@@ -1,3 +1,11 @@
+/*
+ * File: EnergyReservation.cs
+ * Project: Smart Solar Microgrid
+ * Description: Models an energy reservation and transaction state.
+ * Author: Clerin - IT23402584
+ * Author: Thuverakan - IT23281332
+ */
+
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
@@ -18,6 +26,9 @@ public class EnergyReservation
 
     [BsonRepresentation(BsonType.ObjectId)]
     public string SlotId { get; set; } = string.Empty;
+
+    [BsonIgnoreIfNull]
+    public string? ActiveSlotKey { get; set; }
 
     public DateTime ReservationDate { get; set; }
 

@@ -128,7 +128,7 @@ fun SplashScreen() {
 
 @Composable
 fun LoginScreen(onRegister: () -> Unit) {
-    val vm = containerViewModel { AuthViewModel(it.auth, it.sync, it.session) }
+    val vm = containerViewModel { AuthViewModel(it.auth, it.sync) }
     val state by vm.state.collectAsState()
     var nic by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
@@ -179,7 +179,7 @@ fun LoginScreen(onRegister: () -> Unit) {
 
 @Composable
 fun RegisterScreen(onBack: () -> Unit) {
-    val vm = containerViewModel { AuthViewModel(it.auth, it.sync, it.session) }
+    val vm = containerViewModel { AuthViewModel(it.auth, it.sync) }
     val state by vm.state.collectAsState()
     var nic by rememberSaveable { mutableStateOf("") }
     var name by rememberSaveable { mutableStateOf("") }

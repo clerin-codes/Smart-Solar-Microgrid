@@ -1,3 +1,10 @@
+/*
+ * File: ProfileResponseDto.cs
+ * Project: Smart Solar Microgrid
+ * Description: Defines the authenticated user profile response contract.
+ * Author: Shakanyah - IT23214002
+ */
+
 namespace SmartSolarMicrogrid.Api.DTOs.Auth;
 
 public class ProfileResponseDto
