@@ -82,7 +82,7 @@ data class LocalUserEntity(
 
 @Dao
 interface StationDao {
-    @Query("SELECT * FROM stations ORDER BY name")
+    @Query("SELECT * FROM stations ORDER BY id DESC")
     fun observeAll(): Flow<List<StationEntity>>
 
     @Query("SELECT * FROM stations WHERE id = :id")
@@ -103,10 +103,10 @@ interface StationDao {
 
 @Dao
 interface SlotDao {
-    @Query("SELECT * FROM slots ORDER BY date, startTime")
+    @Query("SELECT * FROM slots ORDER BY id DESC")
     fun observeAll(): Flow<List<SlotEntity>>
 
-    @Query("SELECT * FROM slots WHERE stationId = :stationId ORDER BY date, startTime")
+    @Query("SELECT * FROM slots WHERE stationId = :stationId ORDER BY id DESC")
     fun observeForStation(stationId: String): Flow<List<SlotEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

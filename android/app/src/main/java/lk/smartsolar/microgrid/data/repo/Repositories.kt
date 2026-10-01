@@ -29,6 +29,16 @@ class AuthRepository(
 ) {
     val current get() = session.session
 
+    /** Confirms that both the API and its database are healthy before a server is selected. */
+    suspend fun testServer(url: String) {
+        val health = api.testConnection(url)
+        if (!health.status.equals("OK", ignoreCase = true) ||
+            !health.database.equals("Connected", ignoreCase = true)
+        ) {
+            throw AppException("The API responded, but its database is not connected.")
+        }
+    }
+
     fun cachedProfile(nic: String): Flow<LocalUserEntity?> = db.users().observe(nic)
 
     private suspend fun startSession(nic: String, fullName: String, role: String, token: String): Session {
@@ -48,9 +58,9 @@ class AuthRepository(
         return startSession(r.nic, r.fullName, r.role, r.token)
     }
 
-    suspend fun register(nic: String, fullName: String, email: String, phone: String, password: String): Session {
+    suspend fun register(nic: String, fullName: String, email: String, phone: String, password: String): String {
         val r = api.call { it.register(RegisterRequest(nic.trim(), fullName.trim(), email.trim(), phone.trim(), password)) }
-        return startSession(r.nic, r.fullName, r.role, r.token)
+        return r.message
     }
 
     suspend fun profile(): ProfileDto = api.call { it.profile() }.also { cacheProfile(it) }

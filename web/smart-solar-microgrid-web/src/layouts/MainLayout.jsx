@@ -11,7 +11,7 @@ function MainLayout() {
   const { user } = useAuth()
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,_#dbeafe_0,_#f8fafc_32rem)]">
       <div className="flex min-h-screen">
 
         {/* Sidebar */}
@@ -36,8 +36,8 @@ function MainLayout() {
           </nav>
 
           {/* Page Content */}
-          <main className="min-h-[calc(100vh-4rem)] p-6">
-            <Outlet />
+          <main className="min-h-[calc(100vh-4rem)] px-4 py-6 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-[1500px]"><Outlet /></div>
           </main>
 
         </div>

@@ -29,6 +29,7 @@ public class SlotRepository : ISlotRepository
         // Return every energy booking slot stored in MongoDB.
         return await _collection
             .Find(_ => true)
+            .SortByDescending(x => x.CreatedAt)
             .ToListAsync();
     }
 
@@ -48,6 +49,7 @@ public class SlotRepository : ISlotRepository
         // Return all booking slots belonging to the supplied station.
         return await _collection
             .Find(x => x.StationId == stationId)
+            .SortByDescending(x => x.CreatedAt)
             .ToListAsync();
     }
 

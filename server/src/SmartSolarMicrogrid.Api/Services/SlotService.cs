@@ -17,6 +17,12 @@ namespace SmartSolarMicrogrid.Api.Services;
 
 public class SlotService : ISlotService
 {
+    private static readonly TimeZoneInfo SriLankaTimeZone =
+        TimeZoneInfo.FindSystemTimeZoneById(
+            OperatingSystem.IsWindows()
+                ? "Sri Lanka Standard Time"
+                : "Asia/Colombo");
+
     private readonly ISlotRepository _slotRepository;
     private readonly IStationRepository _stationRepository;
 
@@ -35,6 +41,46 @@ public class SlotService : ISlotService
         // Responsible: Sithmi - IT23241114
         // Return every configured energy booking slot.
         return await _slotRepository.GetAllAsync();
+    }
+
+    private static DateTime GetSriLankaToday()
+    {
+        // Responsible: Sithmi - IT23241114
+        // Use the application's local business date for slot validation.
+        return TimeZoneInfo.ConvertTimeFromUtc(
+            DateTime.UtcNow,
+            SriLankaTimeZone).Date;
+    }
+
+    private static void ValidateStationSchedule(
+        SolarStationInfo station,
+        DateTime slotDate,
+        TimeSpan startTime,
+        TimeSpan endTime)
+    {
+        // Responsible: Sithmi - IT23241114
+        // Slots may only be created during an enabled weekly schedule.
+        var dayName = slotDate.DayOfWeek.ToString();
+        var schedule = station.Schedules.FirstOrDefault(s =>
+            string.Equals(
+                s.Day,
+                dayName,
+                StringComparison.OrdinalIgnoreCase));
+
+        if (schedule == null || !schedule.IsAvailable)
+        {
+            throw new InvalidOperationException(
+                $"The station is unavailable on {dayName}.");
+        }
+
+        if (startTime < schedule.OpeningTime ||
+            endTime > schedule.ClosingTime)
+        {
+            throw new InvalidOperationException(
+                $"Slot time must be within the station's {dayName} " +
+                $"schedule ({schedule.OpeningTime:hh\\:mm} - " +
+                $"{schedule.ClosingTime:hh\\:mm}).");
+        }
     }
 
     public async Task<EnergyBookingSlot?> GetByIdAsync(
@@ -79,7 +125,7 @@ public class SlotService : ISlotService
 
         // Slot date cannot be in the past
         if (request.SlotDate.Date <
-            DateTime.UtcNow.Date)
+            GetSriLankaToday())
         {
             throw new InvalidOperationException(
                 "Slot date cannot be in the past.");
@@ -91,6 +137,12 @@ public class SlotService : ISlotService
             throw new InvalidOperationException(
                 "End time must be later than start time.");
         }
+
+        ValidateStationSchedule(
+            station,
+            request.SlotDate.Date,
+            request.StartTime,
+            request.EndTime);
 
         // Capacity must be greater than zero
         if (request.CapacityKw <= 0)
@@ -171,7 +223,7 @@ public class SlotService : ISlotService
 
         // Slot date cannot be in the past
         if (request.SlotDate.Date <
-            DateTime.UtcNow.Date)
+            GetSriLankaToday())
         {
             throw new InvalidOperationException(
                 "Slot date cannot be in the past.");
@@ -183,6 +235,12 @@ public class SlotService : ISlotService
             throw new InvalidOperationException(
                 "End time must be later than start time.");
         }
+
+        ValidateStationSchedule(
+            station,
+            request.SlotDate.Date,
+            request.StartTime,
+            request.EndTime);
 
         // Capacity must be greater than zero
         if (request.CapacityKw <= 0)

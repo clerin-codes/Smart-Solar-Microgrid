@@ -14,6 +14,9 @@ import {
 import { getAllStations } from '../../services/api/stationService'
 
 import SlotForm from './SlotForm'
+import InfoBanner from '../../components/common/InfoBanner'
+import Pagination from '../../components/common/Pagination'
+import useAutoRefresh from '../../hooks/useAutoRefresh'
 
 const SLOT_STATUS = {
     0: 'Available',
@@ -52,19 +55,25 @@ function Slots() {
     // Modal State
     const [showForm, setShowForm] = useState(false)
     const [editSlot, setEditSlot] = useState(null)
+    const [page, setPage] = useState(1)
+    const [pageSize, setPageSize] = useState(10)
 
     // =====================================================
     // Data Loading
     // =====================================================
 
-    const loadData = async () => {
+    const loadData = useCallback(async (silent = false) => {
         try {
-            setLoading(true)
-            setError('')
+            if (!silent) {
+                setLoading(true)
+                setError('')
+            }
 
             const [slotsData, stationsData] =
                 await Promise.all([
-                    getAllSlots(),
+                    stationFilter !== 'all'
+                        ? getSlotsByStation(stationFilter)
+                        : getAllSlots(),
                     getAllStations(),
                 ])
 
@@ -76,19 +85,22 @@ function Slots() {
                     ? stationsData
                     : []
             )
+            setError('')
         } catch (err) {
             console.error('Failed to load data:', err)
-            setError(
-                'Unable to load data. Please check the server connection.'
-            )
+            if (!silent) {
+                setError(
+                    'Unable to load data. Please check the server connection.'
+                )
+            }
         } finally {
-            setLoading(false)
+            if (!silent) setLoading(false)
         }
-    }
+    }, [stationFilter])
 
     useEffect(() => {
         loadData()
-    }, [])
+    }, [loadData])
 
     const reloadSlots = useCallback(async () => {
         try {
@@ -106,9 +118,9 @@ function Slots() {
         }
     }, [stationFilter])
 
-    useEffect(() => {
-        reloadSlots()
-    }, [reloadSlots])
+    useAutoRefresh(() => loadData(true), {
+        enabled: !showForm,
+    })
 
     // =====================================================
     // Search + Filter
@@ -116,14 +128,15 @@ function Slots() {
 
     const filteredSlots = useMemo(() => {
         return slots.filter((slot) => {
-            const slotId = String(
-                slot.id ?? ''
-            ).toLowerCase()
-            const searchValue = search.toLowerCase()
-            // Only search filter here; station filter is handled API-side
-            return slotId.includes(searchValue)
-        })
-    }, [slots, search])
+            const station = stations.find((item) => item.id === slot.stationId)
+            const searchValue = search.trim().toLowerCase()
+            const statusName = getSlotStatus(slot.status)
+            const searchable = `${slot.id} ${station?.stationCode || ''} ${station?.stationName || ''} ${slot.slotDate || ''} ${slot.startTime || ''} ${slot.endTime || ''} ${statusName}`.toLowerCase()
+            return searchable.includes(searchValue)
+        }).sort((a, b) => new Date(b.createdAt || b.slotDate || 0) - new Date(a.createdAt || a.slotDate || 0))
+    }, [slots, stations, search])
+    const currentPage = Math.min(page, Math.max(1, Math.ceil(filteredSlots.length / pageSize)))
+    const pagedSlots = filteredSlots.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
     // =====================================================
     // Summary Counts
@@ -227,6 +240,8 @@ function Slots() {
                 </button>
             </div>
 
+            <InfoBanner>Create dated energy windows for active stations. Prosumers can reserve only future, available slots with remaining capacity.</InfoBanner>
+
             {/* Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-white border border-slate-200 rounded-xl p-5">
@@ -270,9 +285,10 @@ function Slots() {
                         <input
                             type="text"
                             value={search}
-                            onChange={(e) =>
+                            onChange={(e) => {
                                 setSearch(e.target.value)
-                            }
+                                setPage(1)
+                            }}
                             placeholder="Search by slot ID..."
                             className="w-full px-4 py-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
@@ -280,9 +296,10 @@ function Slots() {
 
                     <select
                         value={stationFilter}
-                        onChange={(e) =>
+                        onChange={(e) => {
                             setStationFilter(e.target.value)
-                        }
+                            setPage(1)
+                        }}
                         className="px-4 py-2.5 border border-slate-300 rounded-lg outline-none bg-white text-slate-700 focus:ring-2 focus:ring-blue-500 md:min-w-[200px]"
                     >
                         <option value="all">
@@ -377,7 +394,7 @@ function Slots() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {filteredSlots.map((slot) => (
+                                    {pagedSlots.map((slot) => (
                                         <tr
                                             key={slot.id}
                                             className="hover:bg-slate-50 transition"
@@ -447,6 +464,7 @@ function Slots() {
                                 </tbody>
                             </table>
                         </div>
+                        <Pagination page={currentPage} pageSize={pageSize} totalItems={filteredSlots.length} onPageChange={setPage} onPageSizeChange={(size) => { setPageSize(size); setPage(1) }} />
                     </div>
                 )}
 

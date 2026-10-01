@@ -19,17 +19,24 @@ const links = {
 
 function Sidebar({ collapsed, onToggle }) {
   const { user } = useAuth()
-  return <aside className={`hidden min-h-screen shrink-0 flex-col border-r border-slate-200 bg-[#E8F0F3] transition-all lg:flex ${collapsed ? 'w-20' : 'w-64'}`}>
-    <div className={`flex h-16 items-center border-b border-slate-200 ${collapsed ? 'justify-center' : 'justify-between px-4'}`}>
-      {!collapsed && <span className="font-bold text-slate-800">SunChain</span>}
-      <button type="button" onClick={onToggle} className="h-9 w-9 rounded-lg bg-white text-slate-700 shadow-sm" aria-label="Toggle sidebar">{collapsed ? '›' : '‹'}</button>
-    </div>
-    <nav className="flex-1 space-y-2 p-3">
-      {!collapsed && <p className="px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-500">{user.role === 'Backoffice' ? 'Backoffice' : 'Grid Operator'}</p>}
-      {(links[user.role] || []).map(([label, to]) => <NavLink key={to} to={to} title={collapsed ? label : undefined} className={({ isActive }) => `flex items-center rounded-xl px-3 py-2.5 text-sm font-medium ${collapsed ? 'justify-center' : 'gap-3'} ${isActive ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-700 hover:bg-white/70'}`}><span className="h-2.5 w-2.5 rounded-full bg-current" />{!collapsed && <span>{label}</span>}</NavLink>)}
-    </nav>
-    {!collapsed && <div className="border-t border-slate-200 p-4 text-xs text-slate-500">Smart Solar Microgrid<br/>Web Portal v1.0.0</div>}
-  </aside>
+  return (
+    <aside className={`hidden min-h-screen shrink-0 flex-col bg-gradient-to-b from-slate-950 to-slate-900 text-white shadow-xl transition-all lg:flex ${collapsed ? 'w-20' : 'w-64'}`}>
+      <div className={`flex h-16 items-center border-b border-white/10 ${collapsed ? 'justify-center' : 'justify-between px-4'}`}>
+        {!collapsed && <span className="text-lg font-bold tracking-tight">Sun<span className="text-blue-400">Chain</span></span>}
+        <button type="button" onClick={onToggle} className="h-9 w-9 rounded-lg border border-white/10 bg-white/10 text-white transition hover:bg-white/20" aria-label="Toggle sidebar">{collapsed ? '›' : '‹'}</button>
+      </div>
+      <nav className="flex-1 space-y-2 p-3">
+        {!collapsed && <p className="px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">{user.role === 'Backoffice' ? 'Backoffice' : 'Grid Operator'}</p>}
+        {(links[user.role] || []).map(([label, to]) => (
+          <NavLink key={to} to={to} title={collapsed ? label : undefined} className={({ isActive }) => `flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition ${collapsed ? 'justify-center' : 'gap-3'} ${isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-950/30' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`}>
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 text-xs font-bold">{label.charAt(0)}</span>
+            {!collapsed && <span>{label}</span>}
+          </NavLink>
+        ))}
+      </nav>
+      {!collapsed && <div className="border-t border-white/10 p-4 text-xs leading-5 text-slate-400">Smart Solar Microgrid<br/>Operational Portal v1.0</div>}
+    </aside>
+  )
 }
 
 export default Sidebar

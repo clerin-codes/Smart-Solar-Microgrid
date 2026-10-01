@@ -72,7 +72,7 @@ fun ProsumerHomeScreen(onBook: () -> Unit, onOpen: (String) -> Unit, onProfile: 
 
     val upcoming = items
         .filter { it.statusEnum == ReservationStatus.Pending || it.statusEnum == ReservationStatus.Approved }
-        .sortedWith(compareBy({ it.date }, { it.startTime }))
+        .sortedByDescending { it.createdAt }
 
     Column(Modifier.fillMaxSize()) {
         Row(

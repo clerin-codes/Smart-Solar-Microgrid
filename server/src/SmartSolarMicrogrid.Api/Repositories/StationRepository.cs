@@ -29,6 +29,7 @@ public class StationRepository : IStationRepository
         // Return every solar station stored in MongoDB.
         return await _collection
             .Find(_ => true)
+            .SortByDescending(x => x.CreatedAt)
             .ToListAsync();
     }
 

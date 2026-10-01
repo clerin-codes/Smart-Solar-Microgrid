@@ -1,7 +1,7 @@
 /*
  * File: SeedDataService.cs
  * Project: Smart Solar Microgrid
- * Description: Creates repeatable development users, stations, and booking slots.
+ * Description: Creates the three repeatable development accounts.
  * Author: Shakanyah - IT23214002
  * Author: Sithmi - IT23241114
  */
@@ -26,13 +26,8 @@ public class SeedDataService
     public async Task SeedAsync()
     {
         // Responsible: Shakanyah - IT23214002; Sithmi - IT23241114
-        // Seed users, stations, and slots in dependency order.
+        // Keep automatic demo data limited to the three documented accounts.
         await SeedUsersAsync();
-
-        var stationIds =
-            await SeedStationsAsync();
-
-        await SeedSlotsAsync(stationIds);
     }
 
 

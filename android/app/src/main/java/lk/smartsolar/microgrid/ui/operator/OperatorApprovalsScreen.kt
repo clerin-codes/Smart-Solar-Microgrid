@@ -70,7 +70,9 @@ fun OperatorApprovalsScreen(onOpen: (String) -> Unit) {
 
     LaunchedEffect(Unit) { vm.events.collect { snackbar.showSnackbar(it) } }
 
-    val pending = items.filter { it.statusEnum == ReservationStatus.Pending }
+    val pending = items
+        .filter { it.statusEnum == ReservationStatus.Pending }
+        .sortedByDescending { it.createdAt }
     val pages = approvalPageCount(pending.size)
     // Approving the last row of a page can shrink the list, so keep the page inside the new range.
     val page = requestedPage.coerceIn(0, pages - 1)

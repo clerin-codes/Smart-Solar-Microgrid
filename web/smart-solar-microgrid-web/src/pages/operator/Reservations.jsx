@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -9,6 +10,9 @@ import { useNavigate } from 'react-router-dom'
 import {
   getAllReservations,
 } from '../../services/api/reservationService'
+import InfoBanner from '../../components/common/InfoBanner'
+import Pagination from '../../components/common/Pagination'
+import useAutoRefresh from '../../hooks/useAutoRefresh'
 
 const RESERVATION_STATUS = {
   0: 'Pending',
@@ -82,6 +86,8 @@ function Reservations() {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const navigate = useNavigate()
 
@@ -89,11 +95,12 @@ function Reservations() {
   // Load Reservations
   // =====================================================
 
-  useEffect(() => {
-    const loadReservations = async () => {
+  const loadReservations = useCallback(async (silent = false) => {
       try {
-        setLoading(true)
-        setError('')
+        if (!silent) {
+          setLoading(true)
+          setError('')
+        }
 
         const data =
           await getAllReservations()
@@ -103,22 +110,28 @@ function Reservations() {
             ? data
             : []
         )
+        setError('')
       } catch (err) {
         console.error(
           'Failed to load reservations:',
           err
         )
 
-        setError(
-          'Unable to load reservations. Please check the server connection.'
-        )
+        if (!silent) {
+          setError(
+            'Unable to load reservations. Please check the server connection.'
+          )
+        }
       } finally {
-        setLoading(false)
+        if (!silent) setLoading(false)
       }
-    }
-
-    loadReservations()
   }, [])
+
+  useEffect(() => {
+    loadReservations()
+  }, [loadReservations])
+
+  useAutoRefresh(() => loadReservations(true))
 
   // =====================================================
   // Search + Filter
@@ -127,26 +140,9 @@ function Reservations() {
   const filteredReservations = useMemo(() => {
     return reservations.filter(
       (reservation) => {
-        const reservationId =
-          String(
-            reservation.id ?? ''
-          ).toLowerCase()
-
-        const reservationNumber =
-          String(
-            reservation.reservationNumber ?? ''
-          ).toLowerCase()
-
-        const searchValue =
-          search.toLowerCase()
-
-        const matchesSearch =
-          reservationId.includes(
-            searchValue
-          ) ||
-          reservationNumber.includes(
-            searchValue
-          )
+        const searchValue = search.trim().toLowerCase()
+        const searchable = `${reservation.id || ''} ${reservation.reservationNumber || ''} ${reservation.prosumerNIC || ''} ${reservation.stationId || ''} ${reservation.reservationDate || ''} ${getReservationStatus(reservation.status)} ${getTransactionStatus(reservation.transactionStatus)}`.toLowerCase()
+        const matchesSearch = searchable.includes(searchValue)
 
         const matchesStatus =
           statusFilter === 'all' ||
@@ -159,12 +155,14 @@ function Reservations() {
           matchesStatus
         )
       }
-    )
+    ).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
   }, [
     reservations,
     search,
     statusFilter,
   ])
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(filteredReservations.length / pageSize)))
+  const pagedReservations = filteredReservations.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   // =====================================================
   // Summary Counts
@@ -208,6 +206,8 @@ function Reservations() {
           Manage solar energy reservations
         </p>
       </div>
+
+      <InfoBanner tone="emerald">Open a pending reservation to approve or reject it. Approval generates the prosumer’s QR code; complete the transfer only after that QR has been verified in the Android operator app.</InfoBanner>
 
       {/* =================================================
           Summary Cards
@@ -274,11 +274,10 @@ function Reservations() {
             <input
               type="text"
               value={search}
-              onChange={(event) =>
-                setSearch(
-                  event.target.value
-                )
-              }
+              onChange={(event) => {
+                setSearch(event.target.value)
+                setPage(1)
+              }}
               placeholder="Search by reservation ID or number..."
               className="w-full px-4 py-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
@@ -287,11 +286,10 @@ function Reservations() {
           {/* Status Filter */}
           <select
             value={statusFilter}
-            onChange={(event) =>
-              setStatusFilter(
-                event.target.value
-              )
-            }
+            onChange={(event) => {
+              setStatusFilter(event.target.value)
+              setPage(1)
+            }}
             className="px-4 py-2.5 border border-slate-300 rounded-lg outline-none bg-white text-slate-700 focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">
@@ -417,7 +415,7 @@ function Reservations() {
                 {/* Table Body */}
                 <tbody className="divide-y divide-slate-100">
 
-                  {filteredReservations.map(
+                  {pagedReservations.map(
                     (reservation) => (
 
                       <tr
@@ -519,6 +517,7 @@ function Reservations() {
               </table>
 
             </div>
+            <Pagination page={currentPage} pageSize={pageSize} totalItems={filteredReservations.length} onPageChange={setPage} onPageSizeChange={(size) => { setPageSize(size); setPage(1) }} />
 
           </div>
         )}

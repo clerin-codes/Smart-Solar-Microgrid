@@ -25,10 +25,15 @@ class ProsumerFlowTest : AppTestBase() {
         type("reg_name", "Nimal Perera")
         type("reg_email", "nimal@test.lk")
         type("reg_phone", "0771234567")
-        type("reg_password", "Tester@1234")
-        type("reg_confirm", "Tester@1234")
+        type("reg_password", "Tester@12345")
+        type("reg_confirm", "Tester@12345")
         click("register")
 
+        waitForTag("nic")
+        TestApi.activateProsumer(nic)
+        type("nic", nic)
+        type("password", "Tester@12345")
+        click("sign_in")
         waitForTag("greeting")
         rule.onNodeWithTag("greeting").assertTextContains("Nimal Perera", substring = true)
 
@@ -55,8 +60,8 @@ class ProsumerFlowTest : AppTestBase() {
         click("register")
         waitForText("NIC is required.")
         waitForText("Full name is required.")
-        waitForText("Enter a valid email address.")
-        waitForText("Password must be at least 8 characters.")
+        waitForText("Email address is required.")
+        waitForText("Password needs 12-128 characters", substring = true)
     }
 
     @Test

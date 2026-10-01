@@ -195,7 +195,12 @@ fun ReservationDetailScreen(id: String, onBack: () -> Unit, onEdit: (String) -> 
                     if (isProsumer) VerificationTracking(status, tx)
 
                     val token = current.qrToken
-                    if (isProsumer && status == ReservationStatus.Approved && token != null) {
+                    if (
+                        isProsumer &&
+                        status == ReservationStatus.Approved &&
+                        tx == TxStatus.NotStarted &&
+                        token != null
+                    ) {
                         QrCard(current.number, token, message = vm::postMessage)
                     }
 

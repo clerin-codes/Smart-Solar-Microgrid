@@ -1,5 +1,6 @@
 ﻿package lk.smartsolar.microgrid.ui.auth
 
+import android.widget.Toast
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -46,6 +47,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
@@ -133,13 +135,26 @@ fun SplashScreen() {
 fun LoginScreen(onRegister: () -> Unit) {
     val vm = containerViewModel { AuthViewModel(it.auth, it.sync, it.session) }
     val state by vm.state.collectAsState()
+    val serverState by vm.serverState.collectAsState()
     val configuredServer by vm.baseUrl.collectAsState()
+    val context = LocalContext.current
     var nic by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var submitted by rememberSaveable { mutableStateOf(false) }
     var serverUrl by rememberSaveable { mutableStateOf(configuredServer) }
     var serverError by rememberSaveable { mutableStateOf<String?>(null) }
     var showServerDialog by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(serverState.message) {
+        val message = serverState.message ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        serverError = if (serverState.connected) null else message
+        if (serverState.connected) {
+            serverUrl = vm.baseUrl.value
+            showServerDialog = false
+        }
+        vm.clearServerResult()
+    }
 
     AuthFrame(background = R.drawable.login_background) {
         Logo(Modifier.size(104.dp))
@@ -180,6 +195,7 @@ fun LoginScreen(onRegister: () -> Unit) {
             onClick = {
                 serverUrl = configuredServer
                 serverError = null
+                vm.clearServerResult()
                 showServerDialog = true
             },
             modifier = Modifier.testTag("open_server_settings"),
@@ -228,15 +244,10 @@ fun LoginScreen(onRegister: () -> Unit) {
             },
             confirmButton = {
                 TextButton(
-                    onClick = {
-                        serverError = vm.configureServer(serverUrl)
-                        if (serverError == null) {
-                            serverUrl = vm.baseUrl.value
-                            showServerDialog = false
-                        }
-                    },
+                    onClick = { vm.configureServer(serverUrl) },
                     modifier = Modifier.testTag("save_server"),
-                ) { Text("Save") }
+                    enabled = !serverState.testing,
+                ) { Text(if (serverState.testing) "Testing…" else "Save") }
             },
             dismissButton = {
                 TextButton(onClick = { showServerDialog = false }) { Text("Cancel") }
@@ -249,6 +260,7 @@ fun LoginScreen(onRegister: () -> Unit) {
 fun RegisterScreen(onBack: () -> Unit) {
     val vm = containerViewModel { AuthViewModel(it.auth, it.sync, it.session) }
     val state by vm.state.collectAsState()
+    val context = LocalContext.current
     var nic by rememberSaveable { mutableStateOf("") }
     var name by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
@@ -257,7 +269,7 @@ fun RegisterScreen(onBack: () -> Unit) {
     var confirm by rememberSaveable { mutableStateOf("") }
     var submitted by rememberSaveable { mutableStateOf(false) }
 
-    val errors = mapOf(
+    val localErrors = mapOf(
         "nic" to AuthValidation.nic(nic),
         "name" to AuthValidation.name(name),
         "email" to AuthValidation.email(email),
@@ -265,7 +277,23 @@ fun RegisterScreen(onBack: () -> Unit) {
         "password" to AuthValidation.password(password),
         "confirm" to AuthValidation.confirm(password, confirm),
     )
-    fun err(key: String) = if (submitted) errors[key] else null
+    val serverKeys = mapOf(
+        "nic" to "nic",
+        "name" to "fullname",
+        "email" to "email",
+        "phone" to "phonenumber",
+        "password" to "password",
+    )
+    fun err(key: String): String? {
+        val serverError = serverKeys[key]?.let(state.fieldErrors::get)
+        return serverError ?: if (submitted) localErrors[key] else null
+    }
+
+    LaunchedEffect(state.success) {
+        val message = state.success ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        onBack()
+    }
 
     AuthFrame {
         Spacer(Modifier.height(Spacing.lg))
@@ -277,18 +305,18 @@ fun RegisterScreen(onBack: () -> Unit) {
 
         ErrorState(state.error, modifier = Modifier.widthIn(max = 480.dp), horizontalInset = 0.dp)
         GlassCard(Modifier.widthIn(max = 480.dp), shape = Shapes.hero, contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.xl), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-            SunChainTextField(nic, { nic = it; vm.clearError() }, "NIC", Modifier.testTag("reg_nic"), error = err("nic"), leadingIcon = Icons.Rounded.Badge)
-            SunChainTextField(name, { name = it }, "Full name", Modifier.testTag("reg_name"), error = err("name"), leadingIcon = Icons.Rounded.Person)
-            SunChainTextField(email, { email = it }, "Email", Modifier.testTag("reg_email"), error = err("email"), keyboardType = KeyboardType.Email, leadingIcon = Icons.Rounded.Email)
-            SunChainTextField(phone, { phone = it }, "Phone number", Modifier.testTag("reg_phone"), error = err("phone"), keyboardType = KeyboardType.Phone, leadingIcon = Icons.Rounded.Phone)
-            SunChainTextField(password, { password = it }, "Password", Modifier.testTag("reg_password"), error = err("password"), password = true, leadingIcon = Icons.Rounded.Lock)
+            SunChainTextField(nic, { nic = it; vm.clearFieldError("nic") }, "NIC", Modifier.testTag("reg_nic"), error = err("nic"), leadingIcon = Icons.Rounded.Badge)
+            SunChainTextField(name, { name = it; vm.clearFieldError("fullname") }, "Full name", Modifier.testTag("reg_name"), error = err("name"), leadingIcon = Icons.Rounded.Person)
+            SunChainTextField(email, { email = it; vm.clearFieldError("email") }, "Email", Modifier.testTag("reg_email"), error = err("email"), keyboardType = KeyboardType.Email, leadingIcon = Icons.Rounded.Email)
+            SunChainTextField(phone, { phone = it; vm.clearFieldError("phonenumber") }, "Phone number", Modifier.testTag("reg_phone"), error = err("phone"), keyboardType = KeyboardType.Phone, leadingIcon = Icons.Rounded.Phone)
+            SunChainTextField(password, { password = it; vm.clearFieldError("password") }, "Password", Modifier.testTag("reg_password"), error = err("password"), password = true, leadingIcon = Icons.Rounded.Lock)
             SunChainTextField(confirm, { confirm = it }, "Confirm password", Modifier.testTag("reg_confirm"), error = err("confirm"), password = true, leadingIcon = Icons.Rounded.Lock, imeAction = ImeAction.Done)
             Spacer(Modifier.height(Spacing.sm))
             SunChainButton(
                 "Create account",
                 onClick = {
                     submitted = true
-                    if (errors.values.all { it == null }) vm.register(nic, name, email, phone, password)
+                    if (localErrors.values.all { it == null }) vm.register(nic, name, email, phone, password)
                 },
                 modifier = Modifier.fillMaxWidth().testTag("register"),
                 loading = state.busy,

@@ -12,6 +12,7 @@
 
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using MongoDB.Bson;
@@ -358,16 +359,9 @@ builder.Services.Configure<ApiBehaviorOptions>(
                                     return "request";
                                 }
 
-                                if (entry.Key.Length == 1)
-                                {
-                                    return entry.Key
-                                        .ToLowerInvariant();
-                                }
-
-                                return
-                                    char.ToLowerInvariant(
-                                        entry.Key[0]) +
-                                    entry.Key[1..];
+                                return JsonNamingPolicy
+                                    .CamelCase
+                                    .ConvertName(entry.Key);
                             },
 
                             entry =>
@@ -485,6 +479,51 @@ builder.Services.AddSwaggerGen(options =>
 
 var app =
     builder.Build();
+
+// ======================================================
+// Development Database Reset Command
+// ======================================================
+
+if (args.Contains(
+        "--reset-demo-data",
+        StringComparer.OrdinalIgnoreCase))
+{
+    // Responsible: Shakanyah - IT23214002; Sithmi - IT23241114; Clerin - IT23402584; Thuverakan - IT23281332
+    // Drop only the explicitly named assignment database, then recreate the three documented demo accounts.
+    var database =
+        app.Services.GetRequiredService<IMongoDatabase>();
+
+    var databaseName =
+        database.DatabaseNamespace.DatabaseName;
+
+    if (!string.Equals(
+            databaseName,
+            "SmartSolarMicrogrid",
+            StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException(
+            $"Database reset refused for unexpected database '{databaseName}'.");
+    }
+
+    await database.Client
+        .DropDatabaseAsync(databaseName);
+
+    using var resetScope =
+        app.Services.CreateScope();
+
+    await resetScope.ServiceProvider
+        .GetRequiredService<IUserRepository>()
+        .EnsureIndexesAsync();
+
+    await resetScope.ServiceProvider
+        .GetRequiredService<SeedDataService>()
+        .SeedAsync();
+
+    Console.WriteLine(
+        "Database reset complete. Only the three demo accounts were recreated.");
+
+    return;
+}
 
 // ======================================================
 // 12. MongoDB Startup Connection Test

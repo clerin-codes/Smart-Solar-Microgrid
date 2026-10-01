@@ -63,6 +63,7 @@ public class ReservationRepository : IReservationRepository
         // Return every reservation stored in MongoDB.
         return await _collection
             .Find(_ => true)
+            .SortByDescending(x => x.CreatedAt)
             .ToListAsync();
     }
 
@@ -93,6 +94,7 @@ public class ReservationRepository : IReservationRepository
         // Return all reservations owned by the supplied prosumer NIC.
         return await _collection
             .Find(x => x.ProsumerNIC == nic)
+            .SortByDescending(x => x.CreatedAt)
             .ToListAsync();
     }
 

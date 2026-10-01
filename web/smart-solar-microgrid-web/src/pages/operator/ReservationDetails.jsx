@@ -5,6 +5,7 @@ import {
   approveReservation,
   rejectReservation,
 } from '../../services/api/reservationService'
+import useAutoRefresh from '../../hooks/useAutoRefresh'
 
 const RESERVATION_STATUS = {
   0: 'Pending',
@@ -100,25 +101,30 @@ function ReservationDetails() {
   // Load Reservation
   // =====================================================
 
-  const loadReservation = useCallback(async () => {
+  const loadReservation = useCallback(async (silent = false) => {
     try {
-      setLoading(true)
-      setError('')
+      if (!silent) {
+        setLoading(true)
+        setError('')
+      }
 
       const data = await getReservationById(id)
 
       setReservation(data)
+      setError('')
     } catch (err) {
       console.error(
         'Failed to load reservation:',
         err
       )
 
-      setError(
-        'Unable to load reservation details.'
-      )
+      if (!silent) {
+        setError(
+          'Unable to load reservation details.'
+        )
+      }
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [id])
 
@@ -131,6 +137,11 @@ function ReservationDetails() {
       loadReservation()
     }
   }, [id, loadReservation])
+
+  useAutoRefresh(
+    () => loadReservation(true),
+    { enabled: Boolean(id) }
+  )
 
   // =====================================================
   // Approve Reservation
