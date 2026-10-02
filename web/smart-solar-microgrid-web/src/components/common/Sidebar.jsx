@@ -1,78 +1,60 @@
 import { NavLink } from 'react-router-dom'
 
-const navClass = ({ isActive, collapsed }) =>
-  `flex items-center ${
-    collapsed ? 'justify-center' : 'gap-3'
-  } px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-    isActive
-      ? 'bg-white text-slate-900 shadow-sm'
-      : 'text-slate-700 hover:bg-white/70 hover:text-slate-950'
-  }`
+import useAuth from '../../hooks/useAuth'
 
-function Sidebar({ collapsed, onToggle }) {
+function NavIcon({ children }) {
   return (
-    <aside
-      className={`hidden lg:flex shrink-0 min-h-screen flex-col
-        bg-[#E8F0F3] border-r border-slate-200
-        transition-all duration-300 ease-in-out
-        ${collapsed ? 'w-20' : 'w-64'}
-      `}
-    >
-      {/* Top / Collapse Button */}
-      <div
-        className={`h-16 flex items-center border-b border-slate-200 ${
-          collapsed ? 'justify-center' : 'justify-end px-4'
-        }`}
+    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/70 text-slate-700 shadow-sm transition group-hover:bg-white group-hover:text-blue-700">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={1.8}
+        stroke="currentColor"
+        className="h-5 w-5"
       >
-        <button
-          type="button"
-          onClick={onToggle}
-          className="flex h-9 w-9 items-center justify-center rounded-lg
-                     bg-white text-slate-600 shadow-sm
-                     hover:bg-slate-100 hover:text-slate-900
-                     transition"
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-            className={`h-5 w-5 transition-transform duration-300 ${
-              collapsed ? 'rotate-180' : ''
+        {children}
+      </svg>
+    </span>
+  )
+}
+
+function roleLabel(role) {
+  if (role === 'GridOperator') return 'Grid Operator'
+  return role
+}
+
+function navClass({ isActive, collapsed }) {
+  return `group flex items-center ${
+    collapsed ? 'justify-center' : 'gap-3'
+  } rounded-2xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+    isActive
+      ? 'bg-gradient-to-r from-blue-600 to-sky-500 text-white shadow-lg shadow-blue-200'
+      : 'text-slate-700 hover:bg-white/80 hover:text-slate-950'
+  }`
+}
+
+function NavItem({
+  to,
+  label,
+  collapsed,
+  title,
+  children,
+}) {
+  return (
+    <NavLink
+      to={to}
+      title={collapsed ? title ?? label : undefined}
+      className={(props) => navClass({ ...props, collapsed })}
+    >
+      {({ isActive }) => (
+        <>
+          <span
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl transition ${
+              isActive
+                ? 'bg-white/15 text-white'
+                : 'bg-white/70 text-slate-700 shadow-sm group-hover:bg-white group-hover:text-blue-700'
             }`}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15.75 19.5L8.25 12l7.5-7.5"
-            />
-          </svg>
-        </button>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-3">
-
-        {/* GENERAL */}
-        <div>
-          {!collapsed && (
-            <p className="px-3 mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              General
-            </p>
-          )}
-
-          <NavLink
-            to="/dashboard"
-            className={(props) =>
-              navClass({
-                ...props,
-                collapsed,
-              })
-            }
-            title={collapsed ? 'Overview' : undefined}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -80,321 +62,302 @@ function Sidebar({ collapsed, onToggle }) {
               viewBox="0 0 24 24"
               strokeWidth={1.8}
               stroke="currentColor"
-              className="h-5 w-5 shrink-0"
+              className="h-5 w-5"
+            >
+              {children}
+            </svg>
+          </span>
+
+          {!collapsed && (
+            <span className="truncate">{label}</span>
+          )}
+        </>
+      )}
+    </NavLink>
+  )
+}
+
+function SectionTitle({ children, collapsed }) {
+  if (collapsed) return null
+
+  return (
+    <p className="mb-3 px-3 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">
+      {children}
+    </p>
+  )
+}
+
+function Sidebar({
+  collapsed,
+  onToggle,
+  mobileOpen,
+  onMobileClose,
+}) {
+  const { user } = useAuth()
+
+  const isBackoffice = user?.role === 'Backoffice'
+  const isOperator = user?.role === 'GridOperator'
+
+  return (
+    <>
+      {mobileOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation overlay"
+          onClick={onMobileClose}
+          className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-sm lg:hidden"
+        />
+      )}
+
+      <aside
+        className={`${
+          mobileOpen
+            ? 'fixed inset-y-0 left-0 z-50 flex w-80'
+            : 'hidden'
+        } lg:static lg:z-auto lg:flex lg:min-h-screen ${
+          collapsed ? 'lg:w-24' : 'lg:w-80'
+        } shrink-0 flex-col border-r border-white/60 bg-[linear-gradient(180deg,_#e2ecf3_0%,_#edf4ff_100%)] shadow-xl transition-all duration-300`}
+      >
+        <div
+          className={`flex h-20 items-center border-b border-white/70 ${
+            collapsed
+              ? 'justify-center lg:px-3'
+              : 'justify-between px-5'
+          }`}
+        >
+          {!collapsed && (
+            <div>
+              <p className="text-lg font-bold text-slate-900">
+                Workspace
+              </p>
+              <p className="text-xs text-slate-500">
+                {roleLabel(user?.role)}
+              </p>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onToggle}
+              className="hidden h-10 w-10 items-center justify-center rounded-2xl bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 lg:flex"
+              aria-label={
+                collapsed
+                  ? 'Expand sidebar'
+                  : 'Collapse sidebar'
+              }
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+                className={`h-5 w-5 transition-transform ${
+                  collapsed ? 'rotate-180' : ''
+                }`}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15.75 19.5 8.25 12l7.5-7.5"
+                />
+              </svg>
+            </button>
+
+            <button
+              type="button"
+              onClick={onMobileClose}
+              className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 lg:hidden"
+              aria-label="Close navigation"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+                className="h-5 w-5"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18 18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto px-3 py-5">
+          <div className="space-y-1">
+            <SectionTitle collapsed={collapsed}>
+              General
+            </SectionTitle>
+
+            <NavItem
+              to="/dashboard"
+              label="Overview"
+              collapsed={collapsed}
             >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                d="M3 12l9-9 9 9M5.25 10.5V21h13.5V10.5"
+                d="M3.75 10.5 12 3l8.25 7.5v9a1.5 1.5 0 0 1-1.5 1.5h-13.5a1.5 1.5 0 0 1-1.5-1.5v-9Z"
               />
-            </svg>
+            </NavItem>
 
-            {!collapsed && <span>Overview</span>}
-          </NavLink>
-        </div>
+            <NavItem
+              to="/profile"
+              label="My Profile"
+              collapsed={collapsed}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15.75 6.75a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25a7.5 7.5 0 0 1 15 0"
+              />
+            </NavItem>
+          </div>
 
-        {/* BACKOFFICE */}
-        <div className="mt-8">
-          {!collapsed && (
-            <p className="px-3 mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Backoffice
-            </p>
+          {isBackoffice && (
+            <div className="mt-8 space-y-1">
+              <SectionTitle collapsed={collapsed}>
+                Administration
+              </SectionTitle>
+
+              <NavItem
+                to="/backoffice/dashboard"
+                label="Dashboard"
+                collapsed={collapsed}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3 13.5 9 7.5l4 4 8-8M21 10V4h-6"
+                />
+              </NavItem>
+
+              <NavItem
+                to="/backoffice/users"
+                label="Users"
+                collapsed={collapsed}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M18 18.75a7.5 7.5 0 0 0-12 0M14.25 7.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM18.75 9.75a2.25 2.25 0 1 1 0 4.5m-13.5-4.5a2.25 2.25 0 1 0 0 4.5"
+                />
+              </NavItem>
+
+              <NavItem
+                to="/backoffice/users/pending"
+                label="Pending Activations"
+                collapsed={collapsed}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 6v6l3 2.25M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                />
+              </NavItem>
+
+              <NavItem
+                to="/backoffice/users/deactivation-requests"
+                label="Deactivation Requests"
+                collapsed={collapsed}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18 18 6M6 6l12 12"
+                />
+              </NavItem>
+            </div>
           )}
 
-          <div className="space-y-1">
+          {isBackoffice && (
+            <div className="mt-8 space-y-1">
+              <SectionTitle collapsed={collapsed}>
+                Energy Management
+              </SectionTitle>
 
-            {/* Backoffice Dashboard */}
-            <NavLink
-              to="/backoffice/dashboard"
-              className={(props) =>
-                navClass({
-                  ...props,
-                  collapsed,
-                })
-              }
-              title={collapsed ? 'Dashboard' : undefined}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.8}
-                stroke="currentColor"
-                className="h-5 w-5 shrink-0"
+              <NavItem
+                to="/backoffice/stations"
+                label="Stations"
+                collapsed={collapsed}
               >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  d="M3 13.5l6-6 4 4 8-8"
+                  d="M12 21s7-4.35 7-10a7 7 0 1 0-14 0c0 5.65 7 10 7 10Zm0-7.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"
                 />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M21 10V4h-6"
-                />
-              </svg>
+              </NavItem>
 
-              {!collapsed && <span>Dashboard</span>}
-            </NavLink>
-
-            {/* Users */}
-            <NavLink
-              to="/backoffice/users"
-              className={(props) =>
-                navClass({
-                  ...props,
-                  collapsed,
-                })
-              }
-              title={collapsed ? 'Users' : undefined}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.8}
-                stroke="currentColor"
-                className="h-5 w-5 shrink-0"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15 19.128a9.38 9.38 0 01-3 .372 9.38 9.38 0 01-3-.372"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15 19.128a5.25 5.25 0 00-9-3.678A9.36 9.36 0 0112 3.75a9.36 9.36 0 016 11.7"
-                />
-              </svg>
-
-              {!collapsed && <span>Users</span>}
-            </NavLink>
-
-            {/* Stations */}
-            <NavLink
-              to="/backoffice/stations"
-              className={(props) =>
-                navClass({
-                  ...props,
-                  collapsed,
-                })
-              }
-              title={collapsed ? 'Stations' : undefined}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.8}
-                stroke="currentColor"
-                className="h-5 w-5 shrink-0"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 21s7-4.35 7-10a7 7 0 10-14 0c0 5.65 7 10 7 10z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 13.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"
-                />
-              </svg>
-
-              {!collapsed && <span>Stations</span>}
-            </NavLink>
-
-            {/* Energy Slots */}
-            <NavLink
-              to="/backoffice/slots"
-              className={(props) =>
-                navClass({
-                  ...props,
-                  collapsed,
-                })
-              }
-              title={collapsed ? 'Energy Slots' : undefined}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.8}
-                stroke="currentColor"
-                className="h-5 w-5 shrink-0"
+              <NavItem
+                to="/backoffice/slots"
+                label="Energy Slots"
+                collapsed={collapsed}
               >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   d="M8.25 6.75h7.5M8.25 12h7.5M8.25 17.25h7.5"
                 />
-              </svg>
-
-              {!collapsed && <span>Energy Slots</span>}
-            </NavLink>
-
-          </div>
-        </div>
-
-        {/* GRID OPERATOR */}
-        <div className="mt-8">
-          {!collapsed && (
-            <p className="px-3 mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Grid Operator
-            </p>
+              </NavItem>
+            </div>
           )}
 
-          <div className="space-y-1">
+          {isOperator && (
+            <div className="mt-8 space-y-1">
+              <SectionTitle collapsed={collapsed}>
+                Grid Operations
+              </SectionTitle>
 
-            {/* Operator Dashboard */}
-            <NavLink
-              to="/operator/dashboard"
-              className={(props) =>
-                navClass({
-                  ...props,
-                  collapsed,
-                })
-              }
-              title={collapsed ? 'Dashboard' : undefined}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.8}
-                stroke="currentColor"
-                className="h-5 w-5 shrink-0"
+              <NavItem
+                to="/operator/dashboard"
+                label="Dashboard"
+                collapsed={collapsed}
               >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  d="M3 13.5l6-6 4 4 8-8"
+                  d="M3 13.5 9 7.5l4 4 8-8M21 10V4h-6"
                 />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M21 10V4h-6"
-                />
-              </svg>
+              </NavItem>
 
-              {!collapsed && <span>Dashboard</span>}
-            </NavLink>
-
-            {/* Reservations */}
-            <NavLink
-              to="/operator/reservations"
-              className={(props) =>
-                navClass({
-                  ...props,
-                  collapsed,
-                })
-              }
-              title={collapsed ? 'Reservations' : undefined}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.8}
-                stroke="currentColor"
-                className="h-5 w-5 shrink-0"
+              <NavItem
+                to="/operator/reservations"
+                label="Reservations"
+                collapsed={collapsed}
               >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  d="M9 12.75l2 2 4-4.5"
+                  d="M7.5 3.75h9A2.25 2.25 0 0 1 18.75 6v12a2.25 2.25 0 0 1-2.25 2.25h-9A2.25 2.25 0 0 1 5.25 18V6A2.25 2.25 0 0 1 7.5 3.75Zm1.5 6.75 2 2 4-4.5"
                 />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M7.5 3.75h9A2.25 2.25 0 0118.75 6v12a2.25 2.25 0 01-2.25 2.25h-9A2.25 2.25 0 015.25 18V6A2.25 2.25 0 017.5 3.75z"
-                />
-              </svg>
+              </NavItem>
+            </div>
+          )}
+        </nav>
 
-              {!collapsed && <span>Reservations</span>}
-            </NavLink>
-
-            {/* Transactions */}
-            <NavLink
-              to="/operator/transactions"
-              className={(props) =>
-                navClass({
-                  ...props,
-                  collapsed,
-                })
-              }
-              title={collapsed ? 'Transactions' : undefined}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.8}
-                stroke="currentColor"
-                className="h-5 w-5 shrink-0"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 3v18M17 7H9.5a2.5 2.5 0 100 5H15a2.5 2.5 0 110 5H7"
-                />
-              </svg>
-
-              {!collapsed && <span>Transactions</span>}
-            </NavLink>
-
-            {/* History */}
-            <NavLink
-              to="/operator/history"
-              className={(props) =>
-                navClass({
-                  ...props,
-                  collapsed,
-                })
-              }
-              title={collapsed ? 'History' : undefined}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.8}
-                stroke="currentColor"
-                className="h-5 w-5 shrink-0"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 8v4l3 2"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-
-              {!collapsed && <span>History</span>}
-            </NavLink>
-
+        {!collapsed && (
+          <div className="border-t border-white/70 p-4">
+            <div className="rounded-2xl bg-white/80 p-4 shadow-sm">
+              <p className="truncate text-sm font-semibold text-slate-900">
+                {user?.fullName}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                NIC: {user?.nic}
+              </p>
+              <div className="mt-3 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                {roleLabel(user?.role)}
+              </div>
+            </div>
           </div>
-        </div>
-      </nav>
-
-      {/* Footer */}
-      {!collapsed && (
-        <div className="p-4 border-t border-slate-200">
-          <p className="text-xs font-medium text-slate-600">
-            Smart Solar Microgrid
-          </p>
-
-          <p className="text-xs text-slate-500 mt-1">
-            Web Portal v1.0.0
-          </p>
-        </div>
-      )}
-    </aside>
+        )}
+      </aside>
+    </>
   )
 }
 

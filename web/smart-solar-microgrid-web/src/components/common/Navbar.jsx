@@ -1,63 +1,182 @@
-import { useState } from 'react'
-import logo from '../../assets/logo.png'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useLocation,
+  useNavigate,
+} from 'react-router-dom'
 
-function Navbar() {
+import logo from '../../assets/logo.png'
+import useAuth from '../../hooks/useAuth'
+
+const PAGE_TITLES = {
+  '/dashboard': {
+    title: 'Overview',
+    subtitle: 'Welcome to the Smart Solar Microgrid portal.',
+  },
+  '/profile': {
+    title: 'My Profile',
+    subtitle:
+      'Review and manage your account details securely.',
+  },
+  '/backoffice/dashboard': {
+    title: 'Backoffice Dashboard',
+    subtitle:
+      'Monitor users, activations, and administration tasks.',
+  },
+  '/backoffice/users': {
+    title: 'User Management',
+    subtitle:
+      'Create, update, filter, and manage web users and prosumers.',
+  },
+  '/backoffice/users/pending': {
+    title: 'Pending Activations',
+    subtitle:
+      'Approve prosumer accounts waiting for activation.',
+  },
+  '/backoffice/users/deactivation-requests': {
+    title: 'Deactivation Requests',
+    subtitle:
+      'Review and process user deactivation requests.',
+  },
+  '/backoffice/stations': {
+    title: 'Stations',
+    subtitle:
+      'Manage energy stations and their information.',
+  },
+  '/backoffice/slots': {
+    title: 'Energy Slots',
+    subtitle:
+      'Create and maintain bookable energy reservation slots.',
+  },
+  '/operator/dashboard': {
+    title: 'Operator Dashboard',
+    subtitle:
+      'Track operational activity and reservation workflows.',
+  },
+  '/operator/reservations': {
+    title: 'Reservations',
+    subtitle:
+      'Review and manage current reservations.',
+  },
+}
+
+function getPageMeta(pathname) {
+  return (
+    PAGE_TITLES[pathname] ?? {
+      title: 'Workspace',
+      subtitle: 'Smart Solar Microgrid Management Portal.',
+    }
+  )
+}
+
+function roleLabel(role) {
+  if (role === 'GridOperator') return 'Grid Operator'
+  return role
+}
+
+function Navbar({ onMenuClick }) {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { user, logout } = useAuth()
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const menuRef = useRef(null)
+
+  const pageMeta = useMemo(
+    () => getPageMeta(location.pathname),
+    [location.pathname],
+  )
+
+  useEffect(() => {
+    function handleOutsideClick(event) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target)
+      ) {
+        setIsProfileOpen(false)
+      }
+    }
+
+    document.addEventListener(
+      'mousedown',
+      handleOutsideClick,
+    )
+    return () =>
+      document.removeEventListener(
+        'mousedown',
+        handleOutsideClick,
+      )
+  }, [])
+
+  function handleLogout() {
+    logout()
+    navigate('/login', { replace: true })
+  }
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6">
-      {/* Logo */}
-      <div className="flex items-center">
-        <img
-          src={logo}
-          alt="SunChain"
-          className="h-10 w-auto object-contain"
-        />
-      </div>
-
-      {/* Right Section */}
-      <div className="flex items-center gap-4">
-        {/* Notification */}
-        <button
-          type="button"
-          className="relative p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition"
-          aria-label="Notifications"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.8}
-            stroke="currentColor"
-            className="w-6 h-6"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9a6 6 0 00-12 0v.75a8.967 8.967 0 01-2.31 6.022c1.733.64 3.55 1.085 5.454 1.31m5.713 0a24.255 24.255 0 01-5.713 0m5.713 0a3 3 0 11-5.713 0"
-            />
-          </svg>
-
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
-        </button>
-
-        {/* Profile */}
-        <div className="relative">
+    <header className="sticky top-0 z-40 border-b border-white/70 bg-white/85 shadow-sm backdrop-blur-xl">
+      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <div className="flex min-w-0 items-center gap-4">
           <button
             type="button"
-            onClick={() => setIsProfileOpen(!isProfileOpen)}
-            className="flex items-center gap-3 p-1.5 rounded-lg hover:bg-slate-100 transition"
+            onClick={onMenuClick}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 lg:hidden"
+            aria-label="Open navigation"
           >
-            <div className="w-9 h-9 rounded-full bg-slate-800 text-white flex items-center justify-center font-semibold">
-              S
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+              className="h-5 w-5"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+              />
+            </svg>
+          </button>
+
+          <div className="hidden md:block">
+            <img
+              src={logo}
+              alt="SunChain"
+              className="h-10 w-auto object-contain"
+            />
+          </div>
+
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-bold text-slate-900 sm:text-xl">
+              {pageMeta.title}
+            </h1>
+            <p className="hidden truncate text-sm text-slate-500 sm:block">
+              {pageMeta.subtitle}
+            </p>
+          </div>
+        </div>
+
+        <div
+          ref={menuRef}
+          className="relative shrink-0"
+        >
+          <button
+            type="button"
+            onClick={() =>
+              setIsProfileOpen((current) => !current)
+            }
+            className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-2 py-2 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
+          >
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 to-blue-700 text-sm font-bold text-white">
+              {user?.fullName?.slice(0, 1).toUpperCase() ||
+                'U'}
             </div>
 
-            <div className="hidden sm:block text-left">
-              <p className="text-sm font-semibold text-slate-800">
-                User
+            <div className="hidden text-left sm:block">
+              <p className="max-w-44 truncate text-sm font-semibold text-slate-800">
+                {user?.fullName || 'User'}
               </p>
               <p className="text-xs text-slate-500">
-                Account
+                {roleLabel(user?.role)}
               </p>
             </div>
 
@@ -67,40 +186,44 @@ function Navbar() {
               viewBox="0 0 24 24"
               strokeWidth={2}
               stroke="currentColor"
-              className="w-4 h-4 text-slate-500"
+              className="h-4 w-4 text-slate-400"
             >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+                d="m19.5 8.25-7.5 7.5-7.5-7.5"
               />
             </svg>
           </button>
 
-          {/* Profile Dropdown */}
           {isProfileOpen && (
-            <div className="absolute right-0 top-14 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-2 z-50">
+            <div className="absolute right-0 top-14 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+              <div className="border-b border-slate-100 bg-slate-50 px-4 py-4">
+                <p className="truncate text-sm font-semibold text-slate-900">
+                  {user?.fullName}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {roleLabel(user?.role)}
+                </p>
+              </div>
+
               <button
                 type="button"
-                className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                onClick={() => {
+                  setIsProfileOpen(false)
+                  navigate('/profile')
+                }}
+                className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               >
-                Profile
+                My Profile
               </button>
 
               <button
                 type="button"
-                className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                onClick={handleLogout}
+                className="w-full border-t border-slate-100 px-4 py-3 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50"
               >
-                Settings
-              </button>
-
-              <div className="my-1 border-t border-slate-100" />
-
-              <button
-                type="button"
-                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-              >
-                Logout
+                Sign Out
               </button>
             </div>
           )}

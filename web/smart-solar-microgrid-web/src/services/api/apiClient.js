@@ -1,43 +1,47 @@
-import axios from 'axios'
+import axios from "axios";
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5130/api";
 
 const apiClient = axios.create({
-  baseURL: 'http://localhost:5130/api',
+  baseURL: API_BASE_URL,
+  timeout: 15000,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
-})
+});
 
 apiClient.interceptors.request.use(
-  async (config) => {
-    let token = localStorage.getItem('accessToken')
-
-    // DEV ONLY: Auto login if no token and not trying to login
-    if (!token && !config.url.includes('/Auth/login')) {
-      try {
-        const response = await axios.post(
-          'http://localhost:5130/api/Auth/login',
-          {
-            nic: '200000000001',
-            password: 'Admin@123',
-          }
-        )
-        token = response.data.token
-        localStorage.setItem('accessToken', token)
-        console.log('DEV: Auto-logged in as Backoffice Admin')
-      } catch (e) {
-        console.error('DEV: Auto-login failed', e)
-      }
-    }
+  (config) => {
+    const token = localStorage.getItem("accessToken");
 
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+      config.headers = config.headers ?? {};
+
+      config.headers.Authorization = `Bearer ${token}`;
     }
 
-    return config
+    return config;
   },
-  (error) => {
-    return Promise.reject(error)
-  }
-)
+  (error) => Promise.reject(error),
+);
 
-export default apiClient
+apiClient.interceptors.response.use(
+  (response) => response,
+
+  (error) => {
+    const hasStoredToken = Boolean(localStorage.getItem("accessToken"));
+
+    if (error?.response?.status === 401 && hasStoredToken) {
+      localStorage.removeItem("accessToken");
+
+      localStorage.removeItem("authUser");
+
+      window.dispatchEvent(new Event("auth:unauthorized"));
+    }
+
+    return Promise.reject(error);
+  },
+);
+
+export default apiClient;
