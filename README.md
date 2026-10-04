@@ -2,6 +2,23 @@
 
 A full-stack Smart Solar Microgrid Trading System developed as a university group project. The system provides web and mobile applications connected through a centralized ASP.NET Core Web API and MongoDB database.
 
+## Documentation
+
+The implementation-based documentation below records current behavior and missing checklist features. Use it for detailed setup, contracts, and assessment; older overview sections may describe intended features.
+
+| Document | Contents |
+|---|---|
+| [API_DOCUMENTATION.md](API_DOCUMENTATION.md) | 41 operations, schemas, authorization, errors, cURL examples |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | System/ER/data-flow diagrams, JWT and QR/transfer flows |
+| [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) | Four implemented collections, fields, indexes, examples, missing QR TTL |
+| [USER_MANUAL.md](USER_MANUAL.md) | Role workflows, troubleshooting, screenshot evidence gaps |
+| [DEVELOPER_SETUP.md](DEVELOPER_SETUP.md) | Prerequisites, configuration, local run/build/test commands |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | IIS, static web, APK signing, production configuration and TLS |
+| [KNOWN_ISSUES.md](KNOWN_ISSUES.md) | Source findings, workarounds, performance and future work |
+| [TEST_REPORT.md](TEST_REPORT.md) | Current checks, historical Android evidence, coverage and test gaps |
+
+Assessment scope is documentation and existing testing evidence. Payments, a separate ledger, six MongoDB collections, QR expiry, and a measured 70% coverage target are not implemented or verified. Reservation approval is a Grid Operator action; Backoffice activates Prosumer accounts.
+
 ## Quick Start — Clone, Run & Verify
 
 ### 1. Clone the Repository

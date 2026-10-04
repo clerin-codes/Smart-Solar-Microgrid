@@ -1,0 +1,407 @@
+.transaction-page {
+  padding: 2rem;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+}
+
+.page-header {
+  margin-bottom: 2rem;
+}
+
+.page-header h1 {
+  color: #1a1a2e;
+  margin-bottom: 0.5rem;
+  font-size: 2rem;
+}
+
+.page-header p {
+  color: #666;
+  margin: 0;
+}
+
+.stats-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.stat-label {
+  color: #666;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #1a1a2e;
+}
+
+.stat-value.success {
+  color: #4CAF50;
+}
+
+.stat-value.error {
+  color: #f44;
+}
+
+.error-message {
+  background-color: #fee;
+  border-left: 4px solid #f44;
+  color: #c33;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.error-message button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #c33;
+}
+
+.filters-container {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  flex: 1;
+  min-width: 250px;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.filter-group {
+  display: flex;
+  gap: 1rem;
+}
+
+.filter-group select {
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  background: white;
+  cursor: pointer;
+}
+
+.filter-group select:focus {
+  outline: none;
+  border-color: #4CAF50;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: #666;
+  color: white;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: #555;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.loading {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.empty-state {
+  background: white;
+  padding: 3rem;
+  border-radius: 8px;
+  text-align: center;
+  color: #999;
+}
+
+.transactions-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.transactions-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.transactions-table thead {
+  background-color: #f5f5f5;
+  border-bottom: 2px solid #ddd;
+}
+
+.transactions-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #1a1a2e;
+  font-size: 0.95rem;
+}
+
+.transactions-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+  color: #333;
+}
+
+.transactions-table tbody tr:hover {
+  background-color: #f9f9f9;
+}
+
+.transactions-table tbody tr.status-completed {
+  border-left: 4px solid #4CAF50;
+}
+
+.transactions-table tbody tr.status-failed {
+  border-left: 4px solid #f44;
+}
+
+.transactions-table tbody tr.status-pending {
+  border-left: 4px solid #ff9800;
+}
+
+.transaction-id {
+  font-family: monospace;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.amount {
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status-badge.status-completed {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-badge.status-failed {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.status-badge.status-pending {
+  background-color: #fff3e0;
+  color: #e65100;
+}
+
+.btn-view {
+  padding: 0.4rem 0.8rem;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: background-color 0.3s;
+}
+
+.btn-view:hover {
+  background-color: #45a049;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-top: 1px solid #eee;
+}
+
+.page-info {
+  color: #666;
+  min-width: 150px;
+  text-align: center;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #1a1a2e;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #999;
+  padding: 0;
+}
+
+.close-btn:hover {
+  color: #333;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-row .label {
+  font-weight: 600;
+  color: #333;
+}
+
+.detail-row .value {
+  color: #666;
+  text-align: right;
+  word-break: break-all;
+  max-width: 50%;
+}
+
+@media (max-width: 768px) {
+  .transaction-page {
+    padding: 1rem;
+  }
+
+  .stats-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .filters-container {
+    flex-direction: column;
+  }
+
+  .filter-group {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .filter-group select,
+  .filter-group button {
+    width: 100%;
+  }
+
+  .table-wrapper {
+    font-size: 0.85rem;
+  }
+
+  .transactions-table th,
+  .transactions-table td {
+    padding: 0.75rem;
+  }
+
+  .modal-content {
+    width: 95%;
+  }
+
+  .detail-row {
+    flex-direction: column;
+  }
+
+  .detail-row .value {
+    text-align: left;
+    max-width: 100%;
+    margin-top: 0.25rem;
+  }
+}
