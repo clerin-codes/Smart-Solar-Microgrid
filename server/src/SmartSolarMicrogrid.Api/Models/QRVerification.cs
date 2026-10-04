@@ -6,8 +6,7 @@ namespace SmartSolarMicrogrid.Api.Models
     /// <summary>
     /// QR Verification - MongoDB collection for QR code records
     /// </summary>
-    [BsonCollection("QRVerifications")]
-    public class QRVerification : IEntity
+    public class QRVerification
     {
         [BsonId]
         [BsonRepresentation(BsonType.ObjectId)]

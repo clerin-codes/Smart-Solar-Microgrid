@@ -1,4 +1,6 @@
 using SmartSolarMicrogrid.Api.Models;
+using SmartSolarMicrogrid.Api.Interfaces.Services;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using System.Security.Cryptography;
 using System.Text;
@@ -11,19 +13,21 @@ namespace SmartSolarMicrogrid.Api.Services
     public class QRService
     {
         private readonly IMongoCollection<QRVerification> _qrVerificationCollection;
-        private readonly IMongoCollection<Reservation> _reservationCollection;
-        private readonly IMongoCollection<Station> _stationCollection;
+        private readonly IMongoCollection<EnergyReservation> _reservationCollection;
+        private readonly IMongoCollection<SolarStationInfo> _stationCollection;
+        private readonly IReservationService _reservationService;
         private readonly ILogger<QRService> _logger;
         private const int QR_VALIDITY_HOURS = 2;
 
         /// <summary>
         /// Initialize QR Service with MongoDB collections
         /// </summary>
-        public QRService(IMongoDatabase database, ILogger<QRService> logger)
+        public QRService(IMongoDatabase database, ILogger<QRService> logger, IReservationService reservationService)
         {
             _qrVerificationCollection = database.GetCollection<QRVerification>("QRVerifications");
-            _reservationCollection = database.GetCollection<Reservation>("Reservations");
-            _stationCollection = database.GetCollection<Station>("Stations");
+            _reservationCollection = database.GetCollection<EnergyReservation>("EnergyReservation");
+            _stationCollection = database.GetCollection<SolarStationInfo>("SolarStationInfo");
+            _reservationService = reservationService;
             _logger = logger;
         }
 
@@ -39,7 +43,7 @@ namespace SmartSolarMicrogrid.Api.Services
                 if (reservation == null)
                     throw new Exception("Reservation not found");
 
-                if (reservation.Status != "Approved")
+                if (reservation.Status != ReservationStatus.Approved)
                     throw new Exception("Reservation must be approved before generating QR code");
 
                 // Check if QR already exists for this reservation
@@ -60,7 +64,8 @@ namespace SmartSolarMicrogrid.Api.Services
                 }
 
                 // Generate unique token
-                var token = GenerateUniqueToken(reservationId);
+                var token = reservation.QRToken
+                    ?? throw new InvalidOperationException("Approved reservation has no QR token.");
                 var expiresAt = DateTime.UtcNow.AddHours(QR_VALIDITY_HOURS);
 
                 // Create QR verification record
@@ -123,7 +128,7 @@ namespace SmartSolarMicrogrid.Api.Services
                     .Find(r => r.Id == qrVerification.ReservationId)
                     .FirstOrDefaultAsync();
 
-                if (reservation == null || reservation.Status != "Approved")
+                if (reservation == null || reservation.Status != ReservationStatus.Approved || reservation.QRToken != qrData)
                     return new { IsValid = false, Message = "Invalid reservation" };
 
                 // Get station details
@@ -133,6 +138,8 @@ namespace SmartSolarMicrogrid.Api.Services
 
                 if (station == null)
                     return new { IsValid = false, Message = "Invalid station" };
+
+                await _reservationService.VerifyQRAsync(gridOperatorId, qrData);
 
                 // Mark as verified
                 qrVerification.VerifiedAt = DateTime.UtcNow;
@@ -144,17 +151,61 @@ namespace SmartSolarMicrogrid.Api.Services
                 {
                     IsValid = true,
                     ReservationId = qrVerification.ReservationId,
-                    ProsumerId = reservation.UserId,
+                    ProsumerId = reservation.ProsumerNIC,
                     StationId = reservation.StationId,
-                    Units = reservation.Units,
-                    TotalPrice = reservation.TotalPrice,
-                    SlotTime = reservation.ReservationDate,
+                    // Reservations do not contain metered energy or billing amounts.
+                    Units = (int?)null,
+                    TotalPrice = (double?)null,
+                    SlotTime = reservation.ReservationDate.ToString("O"),
                     Message = "QR verified successfully"
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError($"Error verifying QR code: {ex.Message}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Revoke (delete) a QR code before it has been used.
+        /// Only the owning prosumer, or a non-prosumer (operator/admin), may revoke it.
+        /// Returns false if not found, already verified/used, or not owned by the requester.
+        /// </summary>
+        public async Task<bool> RevokeQRCodeAsync(string token, string requesterNic, bool requesterIsProsumer)
+        {
+            try
+            {
+                var qrVerification = await _qrVerificationCollection
+                    .Find(q => q.Token == token)
+                    .FirstOrDefaultAsync();
+
+                if (qrVerification == null || qrVerification.VerifiedAt != null)
+                {
+                    // Not found, or already used — a used QR code cannot be revoked.
+                    return false;
+                }
+
+                if (requesterIsProsumer)
+                {
+                    var reservation = await _reservationCollection
+                        .Find(r => r.Id == qrVerification.ReservationId)
+                        .FirstOrDefaultAsync();
+
+                    if (reservation == null || reservation.ProsumerNIC != requesterNic)
+                        return false; // not the owning prosumer
+                }
+
+                var result = await _qrVerificationCollection.DeleteOneAsync(q => q.Id == qrVerification.Id);
+
+                if (result.DeletedCount > 0)
+                    _logger.LogInformation($"QR code revoked for reservation: {qrVerification.ReservationId}");
+
+                return result.DeletedCount > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error revoking QR code: {ex.Message}");
                 throw;
             }
         }

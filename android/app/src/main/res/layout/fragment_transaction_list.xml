@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="16dp">
+<Spinner android:id="@+id/status_spinner" android:layout_width="match_parent" android:layout_height="wrap_content" android:entries="@array/legacy_transaction_statuses" />
+<Button android:id="@+id/refresh_button" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/legacy_refresh" />
+<ProgressBar android:id="@+id/progress_bar" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" />
+<TextView android:id="@+id/error_text_view" android:layout_width="match_parent" android:layout_height="wrap_content" android:visibility="gone" android:accessibilityLiveRegion="polite" />
+<LinearLayout android:id="@+id/empty_state_view" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone"><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/legacy_no_transactions" /></LinearLayout>
+<androidx.recyclerview.widget.RecyclerView android:id="@+id/transaction_recycler_view" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+<TextView android:id="@+id/page_info_text_view" android:layout_width="match_parent" android:layout_height="wrap_content" />
+<Button android:id="@+id/previous_button" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/legacy_previous" />
+<Button android:id="@+id/next_button" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/legacy_next" />
+</LinearLayout>

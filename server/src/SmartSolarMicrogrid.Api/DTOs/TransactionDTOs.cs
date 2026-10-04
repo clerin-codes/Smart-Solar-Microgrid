@@ -26,8 +26,8 @@ namespace SmartSolarMicrogrid.Api.DTOs
     {
         public string Id { get; set; } = string.Empty;
         public string ReservationId { get; set; } = string.Empty;
-        public int Units { get; set; }
-        public double Amount { get; set; }
+        public int? Units { get; set; }
+        public double? Amount { get; set; }
         public string Status { get; set; } = string.Empty;
         public DateTime Timestamp { get; set; }
         public string? GridOperator { get; set; }
@@ -43,8 +43,8 @@ namespace SmartSolarMicrogrid.Api.DTOs
         public string ReservationId { get; set; } = string.Empty;
         public string GridOperatorId { get; set; } = string.Empty;
         public string ProsumerId { get; set; } = string.Empty;
-        public int Units { get; set; }
-        public double Amount { get; set; }
+        public int? Units { get; set; }
+        public double? Amount { get; set; }
         public string Status { get; set; } = string.Empty;
         public DateTime Timestamp { get; set; }
     }
@@ -66,6 +66,14 @@ namespace SmartSolarMicrogrid.Api.DTOs
     {
         public bool Success { get; set; }
         public TransactionDetailDto? Data { get; set; }
+    }
+
+    /// <summary>
+    /// Request to update an existing transaction's status (Backoffice correction)
+    /// </summary>
+    public class UpdateTransactionStatusRequest
+    {
+        public string Status { get; set; } = string.Empty;
     }
 
     /// <summary>

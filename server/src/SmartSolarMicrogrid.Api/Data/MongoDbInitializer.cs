@@ -8,7 +8,7 @@ namespace SmartSolarMicrogrid.Api.Data
     /// </summary>
     public static class MongoDbInitializer
     {
-        public static async Task InitializeAsync(IMongoDbContext context)
+        public static async Task InitializeAsync(IMongoDatabase context)
         {
             try
             {
@@ -27,14 +27,14 @@ namespace SmartSolarMicrogrid.Api.Data
             }
         }
 
-        private static async Task InitializeQRVerificationsAsync(IMongoDbContext context)
+        private static async Task InitializeQRVerificationsAsync(IMongoDatabase context)
         {
             var collection = context.GetCollection<QRVerification>("QRVerifications");
 
             // Create TTL index (documents expire after 2 hours)
             var indexModel = new CreateIndexModel<QRVerification>(
                 Builders<QRVerification>.IndexKeys.Ascending(x => x.ExpiresAt),
-                new CreateIndexOptions { ExpireAfter = TimeSpan.FromSeconds(1) }
+                new CreateIndexOptions { ExpireAfter = TimeSpan.Zero }
             );
 
             await collection.Indexes.CreateOneAsync(indexModel);
@@ -55,7 +55,7 @@ namespace SmartSolarMicrogrid.Api.Data
             await collection.Indexes.CreateOneAsync(reservationIndexModel);
         }
 
-        private static async Task InitializeTransactionsAsync(IMongoDbContext context)
+        private static async Task InitializeTransactionsAsync(IMongoDatabase context)
         {
             var collection = context.GetCollection<Transaction>("Transactions");
 

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="legacy_reservation_id">Reservation ID</string>
+<string name="legacy_qr_token">QR token</string>
+<string name="legacy_confirm_transfer">Confirm transfer</string>
+<string name="legacy_cancel">Cancel</string>
+<string name="legacy_booking_qr">Reservation QR code</string>
+<string name="legacy_generate_qr">Generate QR</string>
+<string name="legacy_refresh">Refresh</string>
+<string name="legacy_no_transactions">No transactions</string>
+<string name="legacy_previous">Previous</string>
+<string name="legacy_next">Next</string>
+<string-array name="legacy_transaction_statuses"><item>All</item><item>Completed</item><item>Failed</item><item>Pending</item></string-array>
+</resources>

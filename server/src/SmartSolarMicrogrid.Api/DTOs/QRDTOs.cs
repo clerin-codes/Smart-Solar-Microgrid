@@ -56,8 +56,8 @@ namespace SmartSolarMicrogrid.Api.DTOs
         public string ReservationId { get; set; } = string.Empty;
         public string ProsumerId { get; set; } = string.Empty;
         public string StationId { get; set; } = string.Empty;
-        public int Units { get; set; }
-        public double TotalPrice { get; set; }
+        public int? Units { get; set; }
+        public double? TotalPrice { get; set; }
         public string SlotTime { get; set; } = string.Empty;
         public string Message { get; set; } = string.Empty;
     }

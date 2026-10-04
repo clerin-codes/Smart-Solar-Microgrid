@@ -6,12 +6,11 @@ namespace SmartSolarMicrogrid.Api.Models
     /// <summary>
     /// Transaction - MongoDB collection for energy transfer transactions (immutable ledger)
     /// </summary>
-    [BsonCollection("Transactions")]
-    public class Transaction : IEntity
+    public class Transaction
     {
         [BsonId]
         [BsonRepresentation(BsonType.ObjectId)]
-        public string? Id { get; set; }
+        public string Id { get; set; } = string.Empty;
 
         [BsonElement("reservationId")]
         public string ReservationId { get; set; } = string.Empty;
@@ -23,10 +22,10 @@ namespace SmartSolarMicrogrid.Api.Models
         public string ProsumerId { get; set; } = string.Empty;
 
         [BsonElement("units")]
-        public int Units { get; set; }
+        public int? Units { get; set; }
 
         [BsonElement("amount")]
-        public double Amount { get; set; }
+        public double? Amount { get; set; }
 
         [BsonElement("status")]
         public string Status { get; set; } = "Completed"; // Completed, Failed, Pending

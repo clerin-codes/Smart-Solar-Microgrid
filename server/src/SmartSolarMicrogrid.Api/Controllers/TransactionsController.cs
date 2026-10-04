@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartSolarMicrogrid.Api.DTOs;
 using SmartSolarMicrogrid.Api.Services;
+using System.Security.Claims;
 
 namespace SmartSolarMicrogrid.Api.Controllers
 {
@@ -10,7 +11,7 @@ namespace SmartSolarMicrogrid.Api.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [Authorize(Roles = "GridOperator,Backoffice")]
     public class TransactionsController : ControllerBase
     {
         private readonly TransactionService _transactionService;
@@ -30,6 +31,7 @@ namespace SmartSolarMicrogrid.Api.Controllers
         /// POST: /api/transactions/transfer
         /// </summary>
         [HttpPost("transfer")]
+        [Authorize(Roles = "GridOperator")]
         [ProducesResponseType(typeof(EnergyTransferResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -44,7 +46,9 @@ namespace SmartSolarMicrogrid.Api.Controllers
                 }
 
                 // Process transfer
-                var transaction = await _transactionService.ProcessEnergyTransferAsync(request.ReservationId, request.QrToken);
+                var operatorNic = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                    ?? throw new UnauthorizedAccessException("Missing operator identity.");
+                var transaction = await _transactionService.ProcessEnergyTransferAsync(request.ReservationId, request.QrToken, operatorNic);
 
                 _logger.LogInformation($"Energy transfer completed. Transaction ID: {transaction.Id}");
 
@@ -162,6 +166,62 @@ namespace SmartSolarMicrogrid.Api.Controllers
             {
                 _logger.LogError($"Error retrieving transaction details: {ex.Message}");
                 return StatusCode(500, new { success = false, message = "Failed to retrieve transaction details", error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Update a transaction's status (Backoffice correction, e.g. Completed -> Disputed/Failed)
+        /// PUT: /api/transactions/{id}/status
+        /// </summary>
+        [HttpPut("{id}/status")]
+        [Authorize(Roles = "Backoffice")]
+        [ProducesResponseType(typeof(TransactionDetailResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateTransactionStatus(string id, [FromBody] UpdateTransactionStatusRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(request.Status))
+                {
+                    return BadRequest(new { success = false, message = "Transaction ID and new status are required" });
+                }
+
+                var allowedStatuses = new[] { "Completed", "Failed", "Pending", "Disputed" };
+                if (!allowedStatuses.Contains(request.Status))
+                {
+                    return BadRequest(new { success = false, message = $"Status must be one of: {string.Join(", ", allowedStatuses)}" });
+                }
+
+                var transaction = await _transactionService.UpdateTransactionStatusAsync(id, request.Status);
+
+                if (transaction == null)
+                {
+                    return NotFound(new { success = false, message = "Transaction not found" });
+                }
+
+                _logger.LogInformation($"Transaction {id} status updated to {request.Status}");
+
+                return Ok(new TransactionDetailResponse
+                {
+                    Success = true,
+                    Data = new TransactionDetailDto
+                    {
+                        Id = transaction.Id,
+                        ReservationId = transaction.ReservationId,
+                        Units = transaction.Units,
+                        Amount = transaction.Amount,
+                        Status = transaction.Status,
+                        Timestamp = transaction.Timestamp,
+                        GridOperatorId = transaction.GridOperatorId,
+                        ProsumerId = transaction.ProsumerId
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error updating transaction status: {ex.Message}");
+                return StatusCode(500, new { success = false, message = "Failed to update transaction status", error = ex.Message });
             }
         }
     }
