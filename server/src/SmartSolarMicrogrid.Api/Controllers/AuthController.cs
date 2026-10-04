@@ -2,11 +2,9 @@
  * Smart Solar Microgrid Trading System
  * Member 1 - Authentication and Accounts
  * File: AuthController.cs
- * Purpose: Provides login, public registration, and own-profile
- *          and profile-picture management.
+ * Purpose: Exposes public authentication and Solar Prosumer registration endpoints.
  */
 
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,6 +15,7 @@ namespace SmartSolarMicrogrid.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Produces("application/json")]
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
@@ -26,17 +25,20 @@ public class AuthController : ControllerBase
         IAuthService authService,
         IUserService userService)
     {
-        // Store authentication and account services.
+        // Store services used by authentication and public Prosumer registration.
         _authService = authService;
         _userService = userService;
     }
 
     [AllowAnonymous]
     [HttpPost("login")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login(
         [FromBody] LoginRequestDto request)
     {
-        // Authenticate credentials and issue a JWT.
+        // Validate credentials and return a role-aware JWT for an active account.
         var response =
             await _authService.LoginAsync(request);
 
@@ -45,15 +47,15 @@ public class AuthController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("register-prosumer")]
-    public async Task<IActionResult>
-        RegisterProsumer(
-            [FromBody]
-            RegisterProsumerDto request)
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> RegisterProsumer(
+        [FromBody] RegisterProsumerDto request)
     {
-        // Create a pending Prosumer account from the mobile registration flow.
+        // Create a pending Prosumer account that requires Backoffice activation.
         var user =
-            await _userService
-                .RegisterProsumerAsync(request);
+            await _userService.RegisterProsumerAsync(request);
 
         return StatusCode(
             StatusCodes.Status201Created,
@@ -61,80 +63,7 @@ public class AuthController : ControllerBase
             {
                 message =
                     "Registration successful. Your account is pending Backoffice activation.",
-
                 user
             });
-    }
-
-    // POST: /api/auth/register
-    [HttpPost("register")]
-    public async Task<IActionResult> Register(
-        [FromBody] RegisterRequestDto request)
-    {
-        var response =
-            await _authService.RegisterAsync(request);
-
-        return StatusCode(
-            StatusCodes.Status201Created,
-            response);
-    }
-
-    // GET: /api/auth/profile
-    [HttpGet("profile")]
-    [Authorize]
-    public async Task<IActionResult> GetProfile()
-    {
-        var profile =
-            await _authService.GetProfileAsync(CurrentNic());
-
-        return Ok(profile);
-    }
-
-    // PUT: /api/auth/profile
-    [HttpPut("profile")]
-    [Authorize]
-    public async Task<IActionResult> UpdateProfile(
-        [FromBody] UpdateProfileRequestDto request)
-    {
-        var profile =
-            await _authService.UpdateProfileAsync(
-                CurrentNic(),
-                request);
-
-        return Ok(profile);
-    }
-
-    // PUT: /api/auth/profile/image
-    // Body: { "imageBase64": "<base64 of a JPEG, PNG or WebP>" }
-    [HttpPut("profile/image")]
-    [Authorize]
-    public async Task<IActionResult> UpdateProfileImage(
-        [FromBody] UpdateProfileImageRequestDto request)
-    {
-        var profile =
-            await _authService.UpdateProfileImageAsync(
-                CurrentNic(),
-                request);
-
-        return Ok(profile);
-    }
-
-    // DELETE: /api/auth/profile/image
-    [HttpDelete("profile/image")]
-    [Authorize]
-    public async Task<IActionResult> RemoveProfileImage()
-    {
-        var profile =
-            await _authService.RemoveProfileImageAsync(CurrentNic());
-
-        return Ok(profile);
-    }
-
-    private string CurrentNic()
-    {
-        return User.FindFirst(
-            ClaimTypes.NameIdentifier)?.Value
-            ?? throw new UnauthorizedAccessException(
-                "Invalid token.");
     }
 }

@@ -2,7 +2,7 @@
  * Smart Solar Microgrid Trading System
  * Member 1 - Authentication and Accounts
  * File: UsersController.cs
- * Purpose: Provides Backoffice user and Prosumer administration APIs.
+ * Purpose: Provides Backoffice-only user and Prosumer administration endpoints.
  */
 
 using Microsoft.AspNetCore.Authorization;
@@ -17,23 +17,26 @@ namespace SmartSolarMicrogrid.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Roles = "Backoffice")]
+[Produces("application/json")]
 public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
 
-    public UsersController(
-        IUserService userService)
+    public UsersController(IUserService userService)
     {
-        // Store account-management service.
+        // Store the account-management service used by Backoffice operations.
         _userService = userService;
     }
 
     [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetAll(
         [FromQuery] UserRole? role = null,
         [FromQuery] AccountStatus? status = null)
     {
-        // Retrieve users with optional role/status filtering.
+        // Return users using optional role and lifecycle-status filters.
         var users =
             await _userService.GetAllAsync(
                 role,
@@ -43,34 +46,34 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("pending-activations")]
-    public async Task<IActionResult>
-        GetPendingActivations()
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPendingActivations()
     {
-        // Retrieve Prosumer registrations awaiting approval.
+        // Return pending Solar Prosumer registrations awaiting Backoffice approval.
         var users =
-            await _userService
-                .GetPendingActivationsAsync();
+            await _userService.GetPendingActivationsAsync();
 
         return Ok(users);
     }
 
     [HttpGet("deactivation-requests")]
-    public async Task<IActionResult>
-        GetDeactivationRequests()
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetDeactivationRequests()
     {
-        // Retrieve Prosumer account-deactivation requests.
+        // Return Prosumer deactivation requests awaiting Backoffice finalization.
         var users =
-            await _userService
-                .GetDeactivationRequestsAsync();
+            await _userService.GetDeactivationRequestsAsync();
 
         return Ok(users);
     }
 
     [HttpGet("{nic}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetByNIC(
         string nic)
     {
-        // Retrieve one account by NIC.
+        // Return one managed account using NIC as the primary identifier.
         var user =
             await _userService.GetByNICAsync(nic);
 
@@ -78,10 +81,13 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Create(
         [FromBody] CreateUserDto request)
     {
-        // Create an account through Backoffice.
+        // Create a Backoffice or Grid Operator account with an initial password.
         var user =
             await _userService.CreateAsync(request);
 
@@ -95,11 +101,15 @@ public class UsersController : ControllerBase
     }
 
     [HttpPut("{nic}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Update(
         string nic,
         [FromBody] UpdateUserDto request)
     {
-        // Update a managed account.
+        // Update safe editable profile fields without changing NIC, role or lifecycle state.
         var user =
             await _userService.UpdateAsync(
                 nic,
@@ -109,53 +119,65 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("{nic}/activate")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Activate(
         string nic)
     {
-        // Approve a pending Prosumer account.
+        // Approve a pending Prosumer registration and enable authentication.
         var user =
             await _userService.ActivateAsync(nic);
 
-        return Ok(new
-        {
-            message =
-                "Account activated successfully.",
+        return Ok(
+            new
+            {
+                message =
+                    "Account activated successfully.",
 
-            user
-        });
+                user
+            });
     }
 
     [HttpDelete("{nic}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Deactivate(
         string nic)
     {
-        // Deactivate an account through Backoffice.
+        // Soft-deactivate an active account or finalize a Prosumer deactivation request.
         var user =
             await _userService.DeactivateAsync(nic);
 
-        return Ok(new
-        {
-            message =
-                "Account deactivated successfully.",
+        return Ok(
+            new
+            {
+                message =
+                    "Account deactivated successfully.",
 
-            user
-        });
+                user
+            });
     }
 
     [HttpPost("{nic}/reactivate")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Reactivate(
         string nic)
     {
-        // Reactivate an inactive account through Backoffice.
+        // Restore a previously deactivated account.
         var user =
             await _userService.ReactivateAsync(nic);
 
-        return Ok(new
-        {
-            message =
-                "Account reactivated successfully.",
+        return Ok(
+            new
+            {
+                message =
+                    "Account reactivated successfully.",
 
-            user
-        });
+                user
+            });
     }
 }

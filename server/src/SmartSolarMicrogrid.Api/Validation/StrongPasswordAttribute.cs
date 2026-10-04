@@ -2,18 +2,22 @@
  * Smart Solar Microgrid Trading System
  * Member 1 - Authentication and Accounts
  * File: StrongPasswordAttribute.cs
- * Purpose: Provides reusable server-side strong password validation.
+ * Purpose: Provides reusable server-side validation for account password strength.
  */
 
 using System.ComponentModel.DataAnnotations;
 
 namespace SmartSolarMicrogrid.Api.Validation;
 
+[AttributeUsage(
+    AttributeTargets.Property |
+    AttributeTargets.Field |
+    AttributeTargets.Parameter)]
 public class StrongPasswordAttribute : ValidationAttribute
 {
     public StrongPasswordAttribute()
     {
-        // Provide a general fallback validation message.
+        // Provide a safe fallback message if a caller does not use the detailed validation result.
         ErrorMessage =
             "Password does not meet the required security policy.";
     }
@@ -22,48 +26,47 @@ public class StrongPasswordAttribute : ValidationAttribute
         object? value,
         ValidationContext validationContext)
     {
-        // RequiredAttribute is responsible for missing/null values.
+        // Let RequiredAttribute handle missing values and validate only supplied passwords here.
         if (value == null)
         {
             return ValidationResult.Success;
         }
 
         var password =
-            value.ToString() ?? string.Empty;
+            value.ToString() ??
+            string.Empty;
 
         var failures =
             new List<string>();
 
-        // Enforce a strong but practical password length.
-        if (password.Length < 12 ||
-            password.Length > 128)
+        // Enforce length, character diversity and safe whitespace/control-character rules.
+        if (password.Length is < 12 or > 128)
         {
             failures.Add(
                 "Password must contain between 12 and 128 characters.");
         }
 
-        // Require at least one uppercase letter.
-        if (!password.Any(char.IsUpper))
+        if (!password.Any(
+                char.IsUpper))
         {
             failures.Add(
                 "Password must contain at least one uppercase letter.");
         }
 
-        // Require at least one lowercase letter.
-        if (!password.Any(char.IsLower))
+        if (!password.Any(
+                char.IsLower))
         {
             failures.Add(
                 "Password must contain at least one lowercase letter.");
         }
 
-        // Require at least one number.
-        if (!password.Any(char.IsDigit))
+        if (!password.Any(
+                char.IsDigit))
         {
             failures.Add(
                 "Password must contain at least one number.");
         }
 
-        // Require at least one special character.
         if (!password.Any(
                 character =>
                     char.IsPunctuation(character) ||
@@ -73,15 +76,15 @@ public class StrongPasswordAttribute : ValidationAttribute
                 "Password must contain at least one special character.");
         }
 
-        // Reject accidental leading/trailing spaces.
-        if (password != password.Trim())
+        if (password !=
+            password.Trim())
         {
             failures.Add(
                 "Password must not begin or end with spaces.");
         }
 
-        // Reject control characters.
-        if (password.Any(char.IsControl))
+        if (password.Any(
+                char.IsControl))
         {
             failures.Add(
                 "Password must not contain control characters.");
@@ -90,6 +93,8 @@ public class StrongPasswordAttribute : ValidationAttribute
         return failures.Count == 0
             ? ValidationResult.Success
             : new ValidationResult(
-                string.Join(" ", failures));
+                string.Join(
+                    " ",
+                    failures));
     }
 }

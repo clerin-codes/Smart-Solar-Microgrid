@@ -2,7 +2,7 @@
  * Smart Solar Microgrid Trading System
  * Member 1 - Authentication and Accounts
  * File: AccountController.cs
- * Purpose: Provides authenticated self-service account operations.
+ * Purpose: Provides authenticated self-service profile, password and deactivation operations.
  */
 
 using System.Security.Claims;
@@ -18,37 +18,41 @@ namespace SmartSolarMicrogrid.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+[Produces("application/json")]
 public class AccountController : ControllerBase
 {
     private readonly IUserService _userService;
 
-    public AccountController(
-        IUserService userService)
+    public AccountController(IUserService userService)
     {
-        // Store account-management service.
+        // Store the account-management service used by self-service operations.
         _userService = userService;
     }
 
     [HttpGet("me")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMyProfile()
     {
-        // Load the profile belonging to the authenticated JWT user.
-        var nic =
-            GetCurrentUserNic();
-
-        var user =
-            await _userService.GetByNICAsync(nic);
+        // Resolve the authenticated NIC and return only safe account information.
+        var nic = GetCurrentUserNic();
+        var user = await _userService.GetByNICAsync(nic);
 
         return Ok(user);
     }
 
     [HttpPut("me")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> UpdateMyProfile(
         [FromBody] UpdateUserDto request)
     {
-        // Update only the authenticated account's editable details.
-        var nic =
-            GetCurrentUserNic();
+        // Update only the editable fields of the authenticated account.
+        var nic = GetCurrentUserNic();
 
         var user =
             await _userService.UpdateAsync(
@@ -60,29 +64,56 @@ public class AccountController : ControllerBase
 
     [Authorize(Roles = "Prosumer")]
     [HttpPost("deactivation-request")]
-    public async Task<IActionResult>
-        RequestDeactivation()
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RequestDeactivation()
     {
-        // Allow a Prosumer to request deactivation of their own account.
-        var nic =
-            GetCurrentUserNic();
+        // Move the authenticated active Prosumer into the deactivation-request state.
+        var nic = GetCurrentUserNic();
 
         var user =
             await _userService
                 .RequestOwnDeactivationAsync(nic);
 
-        return Ok(new
-        {
-            message =
-                "Account deactivation requested successfully.",
+        return Ok(
+            new
+            {
+                message =
+                    "Account deactivation requested successfully.",
 
-            user
-        });
+                user
+            });
+    }
+
+    [HttpPost("change-password")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ChangePassword(
+        [FromBody] ChangePasswordDto request)
+    {
+        // Verify the current password and replace it with a strongly validated new password.
+        var nic = GetCurrentUserNic();
+
+        await _userService.ChangePasswordAsync(
+            nic,
+            request);
+
+        return Ok(
+            new
+            {
+                message =
+                    "Password changed successfully."
+            });
     }
 
     private string GetCurrentUserNic()
     {
-        // Extract the trusted NIC identity claim from the JWT.
+        // Read the immutable NIC identifier inserted into the JWT at login.
         var nic =
             User.FindFirstValue(
                 ClaimTypes.NameIdentifier);
@@ -90,7 +121,7 @@ public class AccountController : ControllerBase
         if (string.IsNullOrWhiteSpace(nic))
         {
             throw new UnauthorizedAccessException(
-                "Authenticated user NIC is missing.");
+                "Authenticated user identifier is missing.");
         }
 
         return nic;

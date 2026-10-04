@@ -2,14 +2,14 @@
  * Smart Solar Microgrid Trading System
  * Member 1 - Authentication and Accounts
  * File: JwtSettings.cs
- * Purpose: Defines strongly typed JWT configuration used for
- *          token generation and validation.
+ * Purpose: Defines strongly typed JWT token configuration used by generation and validation.
  */
 
 namespace SmartSolarMicrogrid.Api.Configuration;
 
 public class JwtSettings
 {
+    // Key identifier is shared by JWT generation and validation metadata.
     public const string SigningKeyId =
         "SmartSolarMicrogridSigningKey";
 

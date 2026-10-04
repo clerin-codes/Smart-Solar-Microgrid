@@ -2,12 +2,12 @@
  * Smart Solar Microgrid Trading System
  * Member 1 - Authentication and Accounts
  * File: UserRepository.cs
- * Purpose: Implements MongoDB persistence, indexing and queries
- *          for UserDetails accounts.
+ * Purpose: Implements MongoDB persistence, indexes and account queries.
  */
 
 using MongoDB.Driver;
 
+using SmartSolarMicrogrid.Api.Exceptions;
 using SmartSolarMicrogrid.Api.Interfaces.Repositories;
 using SmartSolarMicrogrid.Api.Models;
 
@@ -20,7 +20,7 @@ public class UserRepository : IUserRepository
     public UserRepository(
         IMongoDatabase database)
     {
-        // Obtain the UserDetails MongoDB collection.
+        // Resolve the UserDetails collection once for repository operations.
         _collection =
             database.GetCollection<UserDetails>(
                 "UserDetails");
@@ -28,106 +28,106 @@ public class UserRepository : IUserRepository
 
     public async Task EnsureIndexesAsync()
     {
-        // Create database-level indexes that enforce unique e-mail
-        // addresses and improve common role/status queries.
+        // Enforce unique normalized emails and accelerate common role/status queries.
         var indexes =
             new List<CreateIndexModel<UserDetails>>
             {
                 new(
-                    Builders<UserDetails>.IndexKeys
+                    Builders<UserDetails>
+                        .IndexKeys
                         .Ascending(x => x.Email),
                     new CreateIndexOptions
                     {
-                        Name = "ux_userdetails_email",
-                        Unique = true
+                        Name =
+                            "ux_userdetails_email",
+
+                        Unique =
+                            true
                     }),
 
                 new(
-                    Builders<UserDetails>.IndexKeys
+                    Builders<UserDetails>
+                        .IndexKeys
                         .Ascending(x => x.Status),
                     new CreateIndexOptions
                     {
-                        Name = "ix_userdetails_status"
+                        Name =
+                            "ix_userdetails_status"
                     }),
 
                 new(
-                    Builders<UserDetails>.IndexKeys
+                    Builders<UserDetails>
+                        .IndexKeys
                         .Ascending(x => x.Role),
                     new CreateIndexOptions
                     {
-                        Name = "ix_userdetails_role"
+                        Name =
+                            "ix_userdetails_role"
                     })
             };
 
-        await _collection.Indexes
+        await _collection
+            .Indexes
             .CreateManyAsync(indexes);
     }
 
     public async Task<UserDetails?> GetByNICAsync(
         string nic)
     {
-        // Retrieve one account using NIC as the primary key.
+        // Query the MongoDB primary key used for all account identity operations.
         return await _collection
             .Find(x => x.NIC == nic)
             .FirstOrDefaultAsync();
-    }
-
-    public async Task<UserDetails?> GetByEmailAsync(string email)
-    {
-        // Emails are compared case-insensitively.
-        var normalised = email.ToLower();
-
-        return await _collection
-            .Find(x => x.Email.ToLower() == normalised)
-            .FirstOrDefaultAsync();
-    }
-
-    public async Task<List<UserDetails>> GetAllAsync()
-    {
-        // Retrieve all user accounts ordered newest first.
-        return await _collection
-            .Find(_ => true)
-            .SortByDescending(x => x.CreatedAt)
-            .ToListAsync();
     }
 
     public async Task<List<UserDetails>> GetFilteredAsync(
         UserRole? role = null,
         AccountStatus? status = null)
     {
-        // Build optional MongoDB-side filters.
+        // Build database-side filters so unnecessary account documents are not returned.
         var filter =
-            Builders<UserDetails>.Filter.Empty;
+            Builders<UserDetails>
+                .Filter
+                .Empty;
 
         if (role.HasValue)
         {
             filter &=
-                Builders<UserDetails>.Filter.Eq(
-                    x => x.Role,
-                    role.Value);
+                Builders<UserDetails>
+                    .Filter
+                    .Eq(
+                        x => x.Role,
+                        role.Value);
         }
 
         if (status.HasValue)
         {
             filter &=
-                Builders<UserDetails>.Filter.Eq(
-                    x => x.Status,
-                    status.Value);
+                Builders<UserDetails>
+                    .Filter
+                    .Eq(
+                        x => x.Status,
+                        status.Value);
         }
 
         return await _collection
             .Find(filter)
-            .SortByDescending(x => x.CreatedAt)
+            .SortByDescending(
+                x => x.CreatedAt)
             .ToListAsync();
     }
 
     public async Task<List<UserDetails>> GetByStatusAsync(
         AccountStatus status)
     {
-        // Retrieve accounts matching the supplied lifecycle status.
+        // Return lifecycle queues ordered with the newest account activity first.
         return await _collection
-            .Find(x => x.Status == status)
-            .SortByDescending(x => x.CreatedAt)
+            .Find(
+                x =>
+                    x.Status ==
+                    status)
+            .SortByDescending(
+                x => x.UpdatedAt)
             .ToListAsync();
     }
 
@@ -135,20 +135,23 @@ public class UserRepository : IUserRepository
         string email,
         string? excludeNic = null)
     {
-        // Build a duplicate-email query while optionally excluding
-        // the account currently being edited.
+        // Check normalized email uniqueness while allowing an account to keep its own email.
         var filter =
-            Builders<UserDetails>.Filter.Eq(
-                x => x.Email,
-                email);
+            Builders<UserDetails>
+                .Filter
+                .Eq(
+                    x => x.Email,
+                    email);
 
         if (!string.IsNullOrWhiteSpace(
                 excludeNic))
         {
             filter &=
-                Builders<UserDetails>.Filter.Ne(
-                    x => x.NIC,
-                    excludeNic);
+                Builders<UserDetails>
+                    .Filter
+                    .Ne(
+                        x => x.NIC,
+                        excludeNic);
         }
 
         return await _collection
@@ -159,18 +162,18 @@ public class UserRepository : IUserRepository
     public async Task CreateAsync(
         UserDetails user)
     {
-        // Insert a new account and translate duplicate-key races
-        // into a controlled validation error.
+        // Insert the account and convert duplicate-key races into HTTP 409 conflicts.
         try
         {
-            await _collection.InsertOneAsync(
-                user);
+            await _collection
+                .InsertOneAsync(user);
         }
         catch (MongoWriteException ex)
-            when (ex.WriteError?.Category ==
-                  ServerErrorCategory.DuplicateKey)
+            when (
+                ex.WriteError?.Category ==
+                ServerErrorCategory.DuplicateKey)
         {
-            throw new InvalidOperationException(
+            throw new ConflictException(
                 "An account with this NIC or e-mail already exists.",
                 ex);
         }
@@ -179,13 +182,17 @@ public class UserRepository : IUserRepository
     public async Task UpdateAsync(
         UserDetails user)
     {
-        // Replace the account identified by the immutable NIC.
+        // Replace the account identified by immutable NIC and preserve duplicate-email handling.
         try
         {
             var result =
-                await _collection.ReplaceOneAsync(
-                    x => x.NIC == user.NIC,
-                    user);
+                await _collection
+                    .ReplaceOneAsync(
+                        x =>
+                            x.NIC ==
+                            user.NIC,
+
+                        user);
 
             if (result.MatchedCount == 0)
             {
@@ -194,10 +201,11 @@ public class UserRepository : IUserRepository
             }
         }
         catch (MongoWriteException ex)
-            when (ex.WriteError?.Category ==
-                  ServerErrorCategory.DuplicateKey)
+            when (
+                ex.WriteError?.Category ==
+                ServerErrorCategory.DuplicateKey)
         {
-            throw new InvalidOperationException(
+            throw new ConflictException(
                 "An account with this e-mail already exists.",
                 ex);
         }
