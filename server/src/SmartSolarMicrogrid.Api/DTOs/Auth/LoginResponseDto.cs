@@ -1,6 +1,6 @@
 /*
  * Smart Solar Microgrid Trading System
- * Author: Shakanyah - IT23214002
+ * Author: Sahanya - IT23214002
  * File: LoginResponseDto.cs
  * Purpose: Returns authenticated user and JWT information.
  */
