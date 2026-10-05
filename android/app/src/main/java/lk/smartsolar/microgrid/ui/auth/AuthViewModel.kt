@@ -10,165 +10,332 @@ import lk.smartsolar.microgrid.data.local.SessionStore
 import lk.smartsolar.microgrid.data.remote.AppException
 import lk.smartsolar.microgrid.data.repo.AuthRepository
 import lk.smartsolar.microgrid.data.repo.SyncManager
-import java.net.URI
 
+/** State shared by login and Prosumer registration. */
 data class AuthUiState(
     val busy: Boolean = false,
     val error: String? = null,
-    val fieldErrors: Map<String, String> = emptyMap(),
-    val success: String? = null,
+    val registrationMessage: String? = null,
 )
 
-data class ServerConnectionState(
-    val testing: Boolean = false,
-    val message: String? = null,
-    val connected: Boolean = false,
-)
-
-/** Field checks shared by the register form and its tests. */
+/**
+ * Client-side validation mirrors the central API rules.
+ *
+ * These checks are for immediate UX feedback only.
+ * The ASP.NET Core API remains authoritative.
+ */
 object AuthValidation {
-    fun nic(value: String): String? {
-        val nic = value.trim()
+
+    fun nic(
+        value: String,
+    ): String? {
+
+        val normalized =
+            value
+                .trim()
+                .uppercase()
+
         return when {
-            nic.isEmpty() -> "NIC is required."
-            !Regex("^(?:\\d{12}|\\d{9}[vVxX])$").matches(nic) -> "Use 12 digits or the old 9-digit format followed by V/X."
-            else -> null
+
+            normalized.isBlank() ->
+                "NIC is required."
+
+            !Regex(
+                "^(?:\\d{12}|\\d{9}[VX])$",
+            ).matches(
+                normalized,
+            ) ->
+                "Enter a valid Sri Lankan NIC."
+
+            else ->
+                null
         }
     }
 
-    fun name(value: String): String? {
-        val name = value.trim()
+    fun name(
+        value: String,
+    ): String? {
+
+        val normalized =
+            value.trim()
+
         return when {
-            name.isEmpty() -> "Full name is required."
-            name.length !in 2..100 -> "Full name must contain between 2 and 100 characters."
-            !Regex("^[\\p{L}][\\p{L}\\p{M}\\s.'-]*$").matches(name) -> "Use letters, spaces, apostrophes, periods or hyphens only."
-            else -> null
+
+            normalized.isBlank() ->
+                "Full name is required."
+
+            normalized.length !in 2..100 ->
+                "Full name must contain between 2 and 100 characters."
+
+            !Regex(
+                "^[\\p{L}][\\p{L}\\p{M}\\s.'-]*$",
+            ).matches(
+                normalized,
+            ) ->
+                "Enter a valid full name."
+
+            else ->
+                null
         }
     }
 
-    fun email(value: String): String? {
-        val email = value.trim()
-        return when {
-            email.isEmpty() -> "Email address is required."
-            email.length > 254 || !Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$").matches(email) -> "Enter a valid email address."
-            else -> null
-        }
-    }
+    fun email(
+        value: String,
+    ): String? =
 
-    fun phone(value: String) = if (Regex("^(?:\\+94|0)7\\d{8}$").matches(value.trim())) null
-        else "Use a Sri Lankan mobile number such as 0771234567 or +94771234567."
-
-    fun password(value: String): String? {
-        val failures = buildList {
-            if (value.length !in 12..128) add("12-128 characters")
-            if (value.none(Char::isUpperCase)) add("an uppercase letter")
-            if (value.none(Char::isLowerCase)) add("a lowercase letter")
-            if (value.none(Char::isDigit)) add("a number")
-            if (value.none { !it.isLetterOrDigit() && !it.isWhitespace() }) add("a special character")
-            if (value != value.trim()) add("no leading or trailing spaces")
-            if (value.any(Char::isISOControl)) add("no control characters")
+        if (
+            Regex(
+                "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+            ).matches(
+                value.trim(),
+            )
+        ) {
+            null
+        } else {
+            "Enter a valid email address."
         }
-        return failures.takeIf { it.isNotEmpty() }?.joinToString(prefix = "Password needs ", postfix = ".")
-    }
-    fun confirm(password: String, confirm: String) = if (password == confirm) null else "Passwords do not match."
+
+    fun phone(
+        value: String,
+    ): String? =
+
+        if (
+            Regex(
+                "^(?:\\+94|0)7\\d{8}$",
+            ).matches(
+                value.trim(),
+            )
+        ) {
+            null
+        } else {
+            "Enter a valid Sri Lankan mobile number."
+        }
+
+    fun password(
+        value: String,
+    ): String? =
+
+        when {
+
+            value.length !in 12..128 ->
+                "Password must contain between 12 and 128 characters."
+
+            value !=
+                    value.trim() ->
+                "Password must not begin or end with spaces."
+
+            value.any {
+                it.isISOControl()
+            } ->
+                "Password must not contain control characters."
+
+            value.none {
+                it.isUpperCase()
+            } ->
+                "Password must contain at least one uppercase letter."
+
+            value.none {
+                it.isLowerCase()
+            } ->
+                "Password must contain at least one lowercase letter."
+
+            value.none {
+                it.isDigit()
+            } ->
+                "Password must contain at least one number."
+
+            value.none {
+                !it.isLetterOrDigit() &&
+                        !it.isWhitespace()
+            } ->
+                "Password must contain at least one special character."
+
+            else ->
+                null
+        }
+
+    fun confirm(
+        password: String,
+        confirm: String,
+    ): String? =
+
+        if (
+            password ==
+            confirm
+        ) {
+            null
+        } else {
+            "Passwords do not match."
+        }
 }
 
+/**
+ * Coordinates authentication while keeping business
+ * rules inside the central API.
+ */
 class AuthViewModel(
-    private val auth: AuthRepository,
-    private val sync: SyncManager,
-    private val session: SessionStore,
+    private val auth:
+    AuthRepository,
+
+    private val sync:
+    SyncManager,
+
+    private val settings:
+    SessionStore,
 ) : ViewModel() {
-    private val _state = MutableStateFlow(AuthUiState())
-    val state: StateFlow<AuthUiState> = _state
-    private val _serverState = MutableStateFlow(ServerConnectionState())
-    val serverState: StateFlow<ServerConnectionState> = _serverState
-    val baseUrl: StateFlow<String> = session.baseUrl
-    fun clearError() = _state.update { it.copy(error = null) }
-    fun clearFieldError(field: String) = _state.update {
-        it.copy(error = null, fieldErrors = it.fieldErrors - field)
-    }
-    fun clearServerResult() { _serverState.value = ServerConnectionState() }
 
-    /** Validates and tests an API root, persisting it only after a healthy response. */
-    fun configureServer(value: String) {
-        if (_serverState.value.testing) return
-        val normalised = normaliseServerUrl(value) ?: return
+    private val _state =
+        MutableStateFlow(
+            AuthUiState(),
+        )
 
-        _serverState.value = ServerConnectionState(testing = true)
+    val state:
+            StateFlow<AuthUiState> =
+        _state
+
+    val serverUrl:
+            StateFlow<String> =
+        settings.baseUrl
+
+    fun setServerUrl(
+        url: String,
+    ) =
+        settings.setBaseUrl(
+            url,
+        )
+
+    fun clearError() =
+        _state.update {
+            it.copy(
+                error =
+                    null,
+            )
+        }
+
+    /** Logs in and starts the correct role-based mobile session. */
+    fun login(
+        nic: String,
+        password: String,
+    ) {
+
+        if (
+            _state.value.busy
+        ) {
+            return
+        }
+
+        _state.value =
+            AuthUiState(
+                busy =
+                    true,
+            )
+
         viewModelScope.launch {
+
             try {
-                auth.testServer(normalised)
-                session.setBaseUrl(normalised)
-                _serverState.value = ServerConnectionState(
-                    message = "Server connected successfully.",
-                    connected = true,
+
+                auth.login(
+                    nic,
+                    password,
                 )
-            } catch (e: AppException) {
-                _serverState.value = ServerConnectionState(
-                    message = e.message ?: "Could not connect to the server.",
+
+                _state.value =
+                    AuthUiState()
+
+                // Refresh operational local data only after authentication succeeds.
+                sync.sync(
+                    notify =
+                        false,
                 )
+
+            } catch (
+                error:
+                AppException,
+            ) {
+
+                _state.value =
+                    AuthUiState(
+                        error =
+                            error.message,
+                    )
+
+            } catch (
+                _: Exception,
+            ) {
+
+                _state.value =
+                    AuthUiState(
+                        error =
+                            "Unable to sign in. Please try again.",
+                    )
             }
         }
     }
 
-    private fun normaliseServerUrl(value: String): String? {
-        val entered = value.trim()
-        if (entered.isEmpty()) return serverError("Server URL is required.")
+    /**
+     * Registers a Prosumer as PendingActivation.
+     *
+     * Registration does not create a login session.
+     */
+    fun register(
+        nic: String,
+        name: String,
+        email: String,
+        phone: String,
+        password: String,
+    ) {
 
-        val withScheme = if (entered.startsWith("http://", true) || entered.startsWith("https://", true)) {
-            entered
-        } else {
-            "http://$entered"
+        if (
+            _state.value.busy
+        ) {
+            return
         }
 
-        val uri = runCatching { URI(withScheme) }.getOrNull()
-            ?: return serverError("Enter a valid server URL.")
-        if (uri.scheme !in setOf("http", "https") || uri.host.isNullOrBlank()) {
-            return serverError("Use an HTTP or HTTPS server address.")
-        }
+        _state.value =
+            AuthUiState(
+                busy =
+                    true,
+            )
 
-        var path = uri.path.orEmpty().trimEnd('/')
-        if (path.isEmpty()) path = "/api"
-        else if (!path.endsWith("/api", ignoreCase = true)) path += "/api"
-
-        return runCatching {
-            URI(uri.scheme.lowercase(), uri.userInfo, uri.host, uri.port, "$path/", null, null).toString()
-        }.getOrNull() ?: serverError("Enter a valid server URL.")
-    }
-
-    private fun serverError(message: String): String? {
-        _serverState.value = ServerConnectionState(message = message)
-        return null
-    }
-
-    fun login(nic: String, password: String) = run { auth.login(nic, password) }
-
-    fun register(nic: String, name: String, email: String, phone: String, password: String) {
-        if (_state.value.busy) return
-        _state.value = AuthUiState(busy = true)
         viewModelScope.launch {
-            try {
-                val message = auth.register(nic, name, email, phone, password)
-                _state.value = AuthUiState(success = message)
-            } catch (e: AppException) {
-                _state.value = AuthUiState(
-                    error = e.message,
-                    fieldErrors = e.fieldErrors,
-                )
-            }
-        }
-    }
 
-    private fun run(block: suspend () -> Unit) {
-        if (_state.value.busy) return
-        _state.value = AuthUiState(busy = true)
-        viewModelScope.launch {
             try {
-                block()
-                _state.value = AuthUiState()
-                sync.sync(notify = false)
-            } catch (e: AppException) {
-                _state.value = AuthUiState(error = e.message)
+
+                val response =
+                    auth.registerProsumer(
+                        nic,
+                        name,
+                        email,
+                        phone,
+                        password,
+                    )
+
+                _state.value =
+                    AuthUiState(
+                        registrationMessage =
+                            response.message,
+                    )
+
+            } catch (
+                error:
+                AppException,
+            ) {
+
+                _state.value =
+                    AuthUiState(
+                        error =
+                            error.message,
+                    )
+
+            } catch (
+                _: Exception,
+            ) {
+
+                _state.value =
+                    AuthUiState(
+                        error =
+                            "Unable to create the account. Please try again.",
+                    )
             }
         }
     }

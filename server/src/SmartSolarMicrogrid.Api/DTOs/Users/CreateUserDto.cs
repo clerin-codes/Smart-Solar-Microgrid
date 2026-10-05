@@ -1,6 +1,6 @@
 /*
  * Smart Solar Microgrid Trading System
- * Author: Shakanyah - IT23214002
+ * Author: Sahanya - IT23214002
  * File: CreateUserDto.cs
  * Purpose: Validates accounts created by Backoffice administrators.
  */

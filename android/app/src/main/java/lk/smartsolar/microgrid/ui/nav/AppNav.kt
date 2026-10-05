@@ -175,8 +175,12 @@ private fun MainNav(session: Session) {
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     val container = LocalContainer.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    // Pick up the profile picture (stored on the server) so the app bars can show it; failures just keep the initials.
-    LaunchedEffect(session.nic) { runCatching { container.auth.profile() } }
+    // Refresh and cache the signed-in user's account profile in SQLite.
+    LaunchedEffect(session.nic) {
+        runCatching {
+            container.auth.profile()
+        }
+    }
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !container.notifier.canNotify()) {
             askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)

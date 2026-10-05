@@ -6,9 +6,18 @@ import lk.smartsolar.microgrid.BuildConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-data class Session(val token: String, val nic: String, val fullName: String, val role: String) {
-    val isProsumer get() = role == ROLE_PROSUMER
-    val isGridOperator get() = role == ROLE_GRID_OPERATOR
+/** Minimal authenticated identity stored between app launches. */
+data class Session(
+    val token: String,
+    val nic: String,
+    val fullName: String,
+    val role: String,
+) {
+    val isProsumer
+        get() = role == ROLE_PROSUMER
+
+    val isGridOperator
+        get() = role == ROLE_GRID_OPERATOR
 
     companion object {
         const val ROLE_PROSUMER = "Prosumer"
@@ -17,84 +26,220 @@ data class Session(val token: String, val nic: String, val fullName: String, val
     }
 }
 
-/** Login session plus small device settings (server address, last sync time), kept in private preferences. */
-class SessionStore(context: Context) {
+/**
+ * Stores authentication/session values in private SharedPreferences.
+ *
+ * Full account/profile information is stored separately in the
+ * Room/SQLite database.
+ */
+class SessionStore(
+    context: Context,
+) {
+
     private val prefs: SharedPreferences =
-        context.getSharedPreferences("sunchain_session", Context.MODE_PRIVATE)
+        context.getSharedPreferences(
+            "sunchain_session",
+            Context.MODE_PRIVATE,
+        )
 
-    private val _session = MutableStateFlow(read())
-    val session: StateFlow<Session?> = _session
+    private val _session =
+        MutableStateFlow(
+            read(),
+        )
 
-    private val _baseUrl = MutableStateFlow(prefs.getString(KEY_BASE_URL, null) ?: BuildConfig.API_BASE_URL)
-    val baseUrl: StateFlow<String> = _baseUrl
+    val session: StateFlow<Session?> =
+        _session
 
-    private val _lastSync = MutableStateFlow(prefs.getLong(KEY_LAST_SYNC, 0L))
-    val lastSync: StateFlow<Long> = _lastSync
+    private val _baseUrl =
+        MutableStateFlow(
+            prefs.getString(
+                KEY_BASE_URL,
+                null,
+            ) ?: BuildConfig.API_BASE_URL,
+        )
 
-    private val _profileImage = MutableStateFlow(prefs.getString(KEY_IMAGE, null))
-    /** Base64 profile picture of the signed-in user, shown in the app bars. Cleared on logout. */
-    val profileImage: StateFlow<String?> = _profileImage
+    val baseUrl: StateFlow<String> =
+        _baseUrl
 
-    val token: String? get() = _session.value?.token
+    private val _lastSync =
+        MutableStateFlow(
+            prefs.getLong(
+                KEY_LAST_SYNC,
+                0L,
+            ),
+        )
 
+    val lastSync: StateFlow<Long> =
+        _lastSync
+
+    val token: String?
+        get() =
+            _session.value?.token
+
+    /** Restores an existing authenticated session. */
     private fun read(): Session? {
-        val token = prefs.getString(KEY_TOKEN, null) ?: return null
+
+        val token =
+            prefs.getString(
+                KEY_TOKEN,
+                null,
+            )
+                ?: return null
+
         return Session(
             token = token,
-            nic = prefs.getString(KEY_NIC, "") ?: "",
-            fullName = prefs.getString(KEY_NAME, "") ?: "",
-            role = prefs.getString(KEY_ROLE, "") ?: "",
+
+            nic =
+                prefs.getString(
+                    KEY_NIC,
+                    "",
+                )
+                    ?: "",
+
+            fullName =
+                prefs.getString(
+                    KEY_NAME,
+                    "",
+                )
+                    ?: "",
+
+            role =
+                prefs.getString(
+                    KEY_ROLE,
+                    "",
+                )
+                    ?: "",
         )
     }
 
-    fun save(session: Session) {
+    /** Saves a JWT session after successful login. */
+    fun save(
+        session: Session,
+    ) {
+
         prefs.edit()
-            .putString(KEY_TOKEN, session.token)
-            .putString(KEY_NIC, session.nic)
-            .putString(KEY_NAME, session.fullName)
-            .putString(KEY_ROLE, session.role)
+            .putString(
+                KEY_TOKEN,
+                session.token,
+            )
+            .putString(
+                KEY_NIC,
+                session.nic,
+            )
+            .putString(
+                KEY_NAME,
+                session.fullName,
+            )
+            .putString(
+                KEY_ROLE,
+                session.role,
+            )
             .apply()
-        _session.value = session
+
+        _session.value =
+            session
     }
 
-    fun setProfileImage(base64: String?) {
-        if (base64 == _profileImage.value) return
-        prefs.edit().apply { if (base64 == null) remove(KEY_IMAGE) else putString(KEY_IMAGE, base64) }.apply()
-        _profileImage.value = base64
+    /** Updates the locally displayed user name after profile editing. */
+    fun updateName(
+        fullName: String,
+    ) {
+
+        val current =
+            _session.value
+                ?: return
+
+        save(
+            current.copy(
+                fullName =
+                    fullName,
+            ),
+        )
     }
 
-    fun updateName(fullName: String) {
-        val current = _session.value ?: return
-        save(current.copy(fullName = fullName))
-    }
-
+    /** Clears authentication data on logout. */
     fun clear() {
+
         prefs.edit()
-            .remove(KEY_TOKEN).remove(KEY_NIC).remove(KEY_NAME).remove(KEY_ROLE).remove(KEY_LAST_SYNC).remove(KEY_IMAGE)
+            .remove(KEY_TOKEN)
+            .remove(KEY_NIC)
+            .remove(KEY_NAME)
+            .remove(KEY_ROLE)
+            .remove(KEY_LAST_SYNC)
             .apply()
-        _session.value = null
-        _lastSync.value = 0L
-        _profileImage.value = null
+
+        _session.value =
+            null
+
+        _lastSync.value =
+            0L
     }
 
-    fun setBaseUrl(url: String) {
-        val normalised = url.trim().let { if (it.endsWith("/")) it else "$it/" }
-        prefs.edit().putString(KEY_BASE_URL, normalised).apply()
-        _baseUrl.value = normalised
+    /** Stores a normalized API URL for emulator/device testing. */
+    fun setBaseUrl(
+        url: String,
+    ) {
+
+        val normalised =
+            url.trim()
+                .let {
+                    if (
+                        it.endsWith(
+                            "/",
+                        )
+                    ) {
+                        it
+                    } else {
+                        "$it/"
+                    }
+                }
+
+        prefs.edit()
+            .putString(
+                KEY_BASE_URL,
+                normalised,
+            )
+            .apply()
+
+        _baseUrl.value =
+            normalised
     }
 
-    fun markSynced(now: Long = System.currentTimeMillis()) {
-        prefs.edit().putLong(KEY_LAST_SYNC, now).apply()
-        _lastSync.value = now
+    /** Records the most recent successful synchronization time. */
+    fun markSynced(
+        now: Long =
+            System.currentTimeMillis(),
+    ) {
+
+        prefs.edit()
+            .putLong(
+                KEY_LAST_SYNC,
+                now,
+            )
+            .apply()
+
+        _lastSync.value =
+            now
     }
 
     private companion object {
-        const val KEY_TOKEN = "token"
-        const val KEY_NIC = "nic"
-        const val KEY_NAME = "name"
-        const val KEY_ROLE = "role"
-        const val KEY_BASE_URL = "base_url"
-        const val KEY_LAST_SYNC = "last_sync"
-        const val KEY_IMAGE = "profile_image"
+
+        const val KEY_TOKEN =
+            "token"
+
+        const val KEY_NIC =
+            "nic"
+
+        const val KEY_NAME =
+            "name"
+
+        const val KEY_ROLE =
+            "role"
+
+        const val KEY_BASE_URL =
+            "base_url"
+
+        const val KEY_LAST_SYNC =
+            "last_sync"
     }
 }
