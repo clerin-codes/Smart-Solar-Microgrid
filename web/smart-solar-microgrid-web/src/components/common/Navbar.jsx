@@ -1,232 +1,300 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  useLocation,
   useNavigate,
 } from 'react-router-dom'
 
-import logo from '../../assets/logo.png'
 import useAuth from '../../hooks/useAuth'
 
-const PAGE_TITLES = {
-  '/dashboard': {
-    title: 'Overview',
-    subtitle: 'Welcome to the Smart Solar Microgrid portal.',
-  },
-  '/profile': {
-    title: 'My Profile',
-    subtitle:
-      'Review and manage your account details securely.',
-  },
-  '/backoffice/dashboard': {
-    title: 'Backoffice Dashboard',
-    subtitle:
-      'Monitor users, activations, and administration tasks.',
-  },
-  '/backoffice/users': {
-    title: 'User Management',
-    subtitle:
-      'Create, update, filter, and manage web users and prosumers.',
-  },
-  '/backoffice/users/pending': {
-    title: 'Pending Activations',
-    subtitle:
-      'Approve prosumer accounts waiting for activation.',
-  },
-  '/backoffice/users/deactivation-requests': {
-    title: 'Deactivation Requests',
-    subtitle:
-      'Review and process user deactivation requests.',
-  },
-  '/backoffice/stations': {
-    title: 'Stations',
-    subtitle:
-      'Manage energy stations and their information.',
-  },
-  '/backoffice/slots': {
-    title: 'Energy Slots',
-    subtitle:
-      'Create and maintain bookable energy reservation slots.',
-  },
-  '/operator/dashboard': {
-    title: 'Operator Dashboard',
-    subtitle:
-      'Track operational activity and reservation workflows.',
-  },
-  '/operator/reservations': {
-    title: 'Reservations',
-    subtitle:
-      'Review and manage current reservations.',
-  },
+/* =====================================================
+   Helpers
+===================================================== */
+
+function getInitials(
+  fullName = '',
+) {
+  const parts =
+    fullName
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+
+  if (
+    parts.length === 0
+  ) {
+    return 'U'
+  }
+
+  if (
+    parts.length === 1
+  ) {
+    return parts[0]
+      .slice(0, 2)
+      .toUpperCase()
+  }
+
+  return `${parts[0][0]}${
+    parts[
+      parts.length - 1
+    ][0]
+  }`.toUpperCase()
 }
 
-function getPageMeta(pathname) {
+function getRoleLabel(role) {
+  if (
+    role === 'GridOperator'
+  ) {
+    return 'Grid Operator'
+  }
+
+  if (
+    role === 'Backoffice'
+  ) {
+    return 'Backoffice'
+  }
+
+  return role || 'User'
+}
+
+/* =====================================================
+   Icons
+===================================================== */
+
+function MenuIcon() {
   return (
-    PAGE_TITLES[pathname] ?? {
-      title: 'Workspace',
-      subtitle: 'Smart Solar Microgrid Management Portal.',
-    }
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </svg>
   )
 }
 
-function roleLabel(role) {
-  if (role === 'GridOperator') return 'Grid Operator'
-  return role
+function LogoutIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
+      <path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4" />
+
+      <path d="m14 8 4 4-4 4" />
+
+      <path d="M18 12H9" />
+    </svg>
+  )
 }
 
-function Navbar({ onMenuClick }) {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const { user, logout } = useAuth()
-  const [isProfileOpen, setIsProfileOpen] = useState(false)
-  const menuRef = useRef(null)
+/* =====================================================
+   Navbar
+===================================================== */
 
-  const pageMeta = useMemo(
-    () => getPageMeta(location.pathname),
-    [location.pathname],
-  )
+/**
+ * Displays the application brand, authenticated user identity
+ * and the explicit logout action for the protected web portal.
+ */
+function Navbar({
+  onOpenMobileMenu,
+}) {
+  const auth =
+    useAuth()
 
-  useEffect(() => {
-    function handleOutsideClick(event) {
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(event.target)
-      ) {
-        setIsProfileOpen(false)
-      }
-    }
+  const navigate =
+    useNavigate()
 
-    document.addEventListener(
-      'mousedown',
-      handleOutsideClick,
+  const user =
+    auth?.user ??
+    auth?.currentUser ??
+    auth?.authUser ??
+    null
+
+  const fullName =
+    user?.fullName ??
+    user?.name ??
+    'User'
+
+  const role =
+    user?.role ?? ''
+
+  const initials =
+    getInitials(
+      fullName,
     )
-    return () =>
-      document.removeEventListener(
-        'mousedown',
-        handleOutsideClick,
-      )
-  }, [])
 
-  function handleLogout() {
-    logout()
-    navigate('/login', { replace: true })
+  /* ===================================================
+     Logout
+  ==================================================== */
+
+  async function handleLogout() {
+    /*
+     * Clear the client authentication session first.
+     * Explicit navigation then guarantees that logout
+     * always finishes on the public login page.
+     */
+
+    if (
+      typeof auth?.logout ===
+      'function'
+    ) {
+      await auth.logout()
+
+      navigate(
+        '/login',
+        {
+          replace: true,
+        },
+      )
+
+      return
+    }
+
+    /*
+     * Compatibility fallback for an alternative auth
+     * provider that exposes signOut instead of logout.
+     */
+
+    if (
+      typeof auth?.signOut ===
+      'function'
+    ) {
+      await auth.signOut()
+
+      navigate(
+        '/login',
+        {
+          replace: true,
+        },
+      )
+
+      return
+    }
+
+    /*
+     * Final defensive fallback. Normally the AuthProvider
+     * handles session cleanup, but this prevents a stale
+     * local session if the provider method is unavailable.
+     */
+
+    localStorage.removeItem(
+      'accessToken',
+    )
+
+    localStorage.removeItem(
+      'authUser',
+    )
+
+    navigate(
+      '/login',
+      {
+        replace: true,
+      },
+    )
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/70 bg-white/85 shadow-sm backdrop-blur-xl">
-      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        <div className="flex min-w-0 items-center gap-4">
+    <header className="sticky top-0 z-40 flex h-[76px] shrink-0 items-center border-b border-slate-200 bg-white px-4 shadow-[0_1px_3px_rgba(15,23,42,0.04)] sm:px-6">
+      <div className="flex w-full items-center justify-between gap-5">
+        {/* =================================================
+            LEFT SIDE
+        ================================================== */}
+
+        <div className="flex min-w-0 items-center gap-3">
+          {/* Mobile menu */}
+
           <button
             type="button"
-            onClick={onMenuClick}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 lg:hidden"
+            onClick={
+              onOpenMobileMenu
+            }
             aria-label="Open navigation"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 lg:hidden"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="h-5 w-5"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-              />
-            </svg>
+            <MenuIcon />
           </button>
 
-          <div className="hidden md:block">
-            <img
-              src={logo}
-              alt="SunChain"
-              className="h-10 w-auto object-contain"
-            />
-          </div>
+          {/* Brand */}
 
-          <div className="min-w-0">
-            <h1 className="truncate text-lg font-bold text-slate-900 sm:text-xl">
-              {pageMeta.title}
-            </h1>
-            <p className="hidden truncate text-sm text-slate-500 sm:block">
-              {pageMeta.subtitle}
-            </p>
+          <div className="flex min-w-0 items-center">
+            <div className="shrink-0 select-none text-[27px] font-extrabold tracking-[-0.06em]">
+              <span className="text-orange-500">
+                Sun
+              </span>
+
+              <span className="text-blue-800">
+                Chain
+              </span>
+            </div>
+
+            {/* Divider */}
+
+            <div className="mx-4 hidden h-8 w-px bg-slate-200 sm:block" />
+
+            {/* Product name */}
+
+            <div className="hidden min-w-0 sm:block">
+              <p className="truncate text-[15px] font-semibold text-slate-900">
+                Smart Solar Microgrid
+              </p>
+
+              <p className="mt-0.5 text-xs font-medium text-slate-400">
+                Operations Console
+              </p>
+            </div>
           </div>
         </div>
 
-        <div
-          ref={menuRef}
-          className="relative shrink-0"
-        >
+        {/* =================================================
+            RIGHT SIDE
+        ================================================== */}
+
+        <div className="flex shrink-0 items-center gap-2.5">
+          {/* =================================================
+              USER INFORMATION
+          ================================================== */}
+
+          <div className="flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white px-2.5 py-2 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+            {/* Initials */}
+
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-900 text-[13px] font-bold uppercase tracking-[0.04em] text-white">
+              {initials}
+            </div>
+
+            {/* Name / role */}
+
+            <div className="hidden min-w-0 pr-2 text-left sm:block">
+              <p className="max-w-[205px] truncate text-[14px] font-semibold leading-5 text-slate-900">
+                {fullName}
+              </p>
+
+              <p className="mt-0.5 text-xs font-medium text-slate-500">
+                {getRoleLabel(
+                  role,
+                )}
+              </p>
+            </div>
+          </div>
+
+          {/* =================================================
+              LOGOUT
+          ================================================== */}
+
           <button
             type="button"
-            onClick={() =>
-              setIsProfileOpen((current) => !current)
+            onClick={
+              handleLogout
             }
-            className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-2 py-2 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
+            aria-label="Logout"
+            className="flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-600 transition-all duration-200 hover:border-red-300 hover:bg-red-100 hover:text-red-700 focus:outline-none focus:ring-4 focus:ring-red-50"
           >
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 to-blue-700 text-sm font-bold text-white">
-              {user?.fullName?.slice(0, 1).toUpperCase() ||
-                'U'}
-            </div>
-
-            <div className="hidden text-left sm:block">
-              <p className="max-w-44 truncate text-sm font-semibold text-slate-800">
-                {user?.fullName || 'User'}
-              </p>
-              <p className="text-xs text-slate-500">
-                {roleLabel(user?.role)}
-              </p>
-            </div>
-
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="h-4 w-4 text-slate-400"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="m19.5 8.25-7.5 7.5-7.5-7.5"
-              />
-            </svg>
+            <LogoutIcon />
           </button>
-
-          {isProfileOpen && (
-            <div className="absolute right-0 top-14 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-              <div className="border-b border-slate-100 bg-slate-50 px-4 py-4">
-                <p className="truncate text-sm font-semibold text-slate-900">
-                  {user?.fullName}
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  {roleLabel(user?.role)}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setIsProfileOpen(false)
-                  navigate('/profile')
-                }}
-                className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-              >
-                My Profile
-              </button>
-
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="w-full border-t border-slate-100 px-4 py-3 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50"
-              >
-                Sign Out
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </header>

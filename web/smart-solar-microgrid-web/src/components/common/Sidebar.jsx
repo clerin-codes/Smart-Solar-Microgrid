@@ -1,362 +1,581 @@
-import { NavLink } from 'react-router-dom'
+import {
+  NavLink,
+} from 'react-router-dom'
 
 import useAuth from '../../hooks/useAuth'
 
-function NavIcon({ children }) {
-  return (
-    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/70 text-slate-700 shadow-sm transition group-hover:bg-white group-hover:text-blue-700">
+/* =====================================================
+   Icons
+===================================================== */
+
+function Icon({
+  name,
+}) {
+  const common =
+    'h-[18px] w-[18px]'
+
+  if (name === 'overview') {
+    return (
       <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
         viewBox="0 0 24 24"
-        strokeWidth={1.8}
+        fill="none"
         stroke="currentColor"
+        strokeWidth="1.8"
+        className={common}
+      >
+        <path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-9.5Z" />
+      </svg>
+    )
+  }
+
+  if (name === 'profile') {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        className={common}
+      >
+        <circle
+          cx="12"
+          cy="8"
+          r="3.5"
+        />
+
+        <path d="M5.5 20a6.5 6.5 0 0 1 13 0" />
+      </svg>
+    )
+  }
+
+  if (name === 'users') {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        className={common}
+      >
+        <circle
+          cx="9"
+          cy="8"
+          r="3"
+        />
+
+        <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
+
+        <path d="M16 6.5a2.5 2.5 0 0 1 0 5" />
+
+        <path d="M17 14a5 5 0 0 1 4 5" />
+      </svg>
+    )
+  }
+
+  if (name === 'pending') {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        className={common}
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="8"
+        />
+
+        <path d="M12 8v4l2.5 1.5" />
+      </svg>
+    )
+  }
+
+  if (name === 'deactivation') {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        className={common}
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="8"
+        />
+
+        <path d="m9 9 6 6M15 9l-6 6" />
+      </svg>
+    )
+  }
+
+  if (name === 'station') {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        className={common}
+      >
+        <path d="M12 21s6-5 6-11a6 6 0 1 0-12 0c0 6 6 11 6 11Z" />
+
+        <circle
+          cx="12"
+          cy="10"
+          r="2"
+        />
+      </svg>
+    )
+  }
+
+  if (name === 'slots') {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        className={common}
+      >
+        <rect
+          x="4"
+          y="4"
+          width="16"
+          height="16"
+          rx="2"
+        />
+
+        <path d="M8 9h8M8 13h8M8 17h5" />
+      </svg>
+    )
+  }
+
+  if (name === 'reservations') {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        className={common}
+      >
+        <rect
+          x="4"
+          y="5"
+          width="16"
+          height="15"
+          rx="2"
+        />
+
+        <path d="M8 3v4M16 3v4M4 10h16" />
+
+        <path d="m9 15 2 2 4-4" />
+      </svg>
+    )
+  }
+
+  if (name === 'collapse') {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
         className="h-5 w-5"
       >
-        {children}
+        <path d="m14 7-5 5 5 5" />
       </svg>
-    </span>
-  )
+    )
+  }
+
+  return null
 }
 
-function roleLabel(role) {
-  if (role === 'GridOperator') return 'Grid Operator'
-  return role
-}
+/* =====================================================
+   Sidebar Item
+===================================================== */
 
-function navClass({ isActive, collapsed }) {
-  return `group flex items-center ${
-    collapsed ? 'justify-center' : 'gap-3'
-  } rounded-2xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
-    isActive
-      ? 'bg-gradient-to-r from-blue-600 to-sky-500 text-white shadow-lg shadow-blue-200'
-      : 'text-slate-700 hover:bg-white/80 hover:text-slate-950'
-  }`
-}
-
-function NavItem({
+function SidebarItem({
   to,
+  icon,
   label,
   collapsed,
-  title,
-  children,
+  onNavigate,
+  end = false,
 }) {
   return (
     <NavLink
       to={to}
-      title={collapsed ? title ?? label : undefined}
-      className={(props) => navClass({ ...props, collapsed })}
+      end={end}
+      onClick={onNavigate}
+      aria-label={label}
+      className={({
+        isActive,
+      }) =>
+        [
+          'group relative flex h-[44px] items-center rounded-xl transition-all duration-200',
+
+          collapsed
+            ? 'justify-center'
+            : 'gap-3 px-3',
+
+          isActive
+            ? 'bg-[#2F6FED] text-white shadow-[0_6px_18px_rgba(47,111,237,0.28)]'
+            : 'text-slate-100 hover:bg-white/[0.09] hover:text-white',
+        ].join(' ')
+      }
     >
-      {({ isActive }) => (
+      {({
+        isActive,
+      }) => (
         <>
+          {/* Icon */}
+
           <span
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl transition ${
+            className={[
+              'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-200',
+
               isActive
                 ? 'bg-white/15 text-white'
-                : 'bg-white/70 text-slate-700 shadow-sm group-hover:bg-white group-hover:text-blue-700'
-            }`}
+                : 'bg-white text-[#234E76] shadow-sm group-hover:bg-blue-50 group-hover:text-blue-700',
+            ].join(' ')}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.8}
-              stroke="currentColor"
-              className="h-5 w-5"
-            >
-              {children}
-            </svg>
+            <Icon
+              name={icon}
+            />
           </span>
 
+          {/* Label */}
+
           {!collapsed && (
-            <span className="truncate">{label}</span>
+            <span className="min-w-0 flex-1 truncate text-[14px] font-semibold tracking-[-0.01em]">
+              {label}
+            </span>
           )}
+
+          {/* Active indicator */}
+
+          {isActive &&
+            !collapsed && (
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-white" />
+            )}
         </>
       )}
     </NavLink>
   )
 }
 
-function SectionTitle({ children, collapsed }) {
-  if (collapsed) return null
+/* =====================================================
+   Sidebar Group
+===================================================== */
 
+function SidebarGroup({
+  title,
+  collapsed,
+  children,
+}) {
   return (
-    <p className="mb-3 px-3 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">
-      {children}
-    </p>
+    <div className="mt-5">
+      {!collapsed ? (
+        <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-blue-200/70">
+          {title}
+        </p>
+      ) : (
+        <div className="mx-auto mb-2 h-px w-7 bg-white/15" />
+      )}
+
+      <div className="space-y-1">
+        {children}
+      </div>
+    </div>
   )
 }
+
+/* =====================================================
+   Sidebar
+===================================================== */
 
 function Sidebar({
   collapsed,
   onToggle,
   mobileOpen,
-  onMobileClose,
+  onCloseMobile,
 }) {
-  const { user } = useAuth()
+  const auth =
+    useAuth()
 
-  const isBackoffice = user?.role === 'Backoffice'
-  const isOperator = user?.role === 'GridOperator'
+  const user =
+    auth?.user ??
+    auth?.currentUser ??
+    auth?.authUser ??
+    null
+
+  const role =
+    user?.role ?? ''
+
+  const isBackoffice =
+    role === 'Backoffice'
+
+  const isGridOperator =
+    role === 'GridOperator'
+
+  /* ===================================================
+     Correct Overview Route
+  ==================================================== */
+
+  const overviewPath =
+    isBackoffice
+      ? '/backoffice/dashboard'
+      : isGridOperator
+        ? '/operator/dashboard'
+        : '/dashboard'
+
+  function closeMobile() {
+    if (
+      typeof onCloseMobile ===
+      'function'
+    ) {
+      onCloseMobile()
+    }
+  }
+
+  const sidebar = (
+    <aside
+      className={`flex h-full flex-col overflow-hidden border-r border-blue-950/20 bg-gradient-to-b from-[#123B63] via-[#103657] to-[#0D2E4A] text-white shadow-[4px_0_18px_rgba(15,47,75,0.08)] transition-[width] duration-300 ${
+        collapsed
+          ? 'w-[86px]'
+          : 'w-[288px]'
+      }`}
+    >
+      {/* =================================================
+          TOP
+      ================================================== */}
+
+      <div
+        className={`flex h-[72px] shrink-0 items-center border-b border-white/10 ${
+          collapsed
+            ? 'justify-center px-3'
+            : 'justify-between px-5'
+        }`}
+      >
+        {!collapsed && (
+          <h2 className="text-[21px] font-bold tracking-[-0.035em] text-white">
+            Workspace
+          </h2>
+        )}
+
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label={
+            collapsed
+              ? 'Expand sidebar'
+              : 'Collapse sidebar'
+          }
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/[0.08] text-blue-100 transition-all duration-200 hover:border-white/25 hover:bg-white/[0.14] hover:text-white ${
+            collapsed
+              ? 'rotate-180'
+              : ''
+          }`}
+        >
+          <Icon
+            name="collapse"
+          />
+        </button>
+      </div>
+
+      {/* =================================================
+          NAVIGATION
+      ================================================== */}
+
+      <div className="min-h-0 flex-1 overflow-hidden px-3">
+        {/* =================================================
+            GENERAL
+        ================================================== */}
+
+        <SidebarGroup
+          title="General"
+          collapsed={collapsed}
+        >
+          {/* Overview now points to actual role dashboard */}
+
+          <SidebarItem
+            to={overviewPath}
+            icon="overview"
+            label="Overview"
+            collapsed={collapsed}
+            onNavigate={closeMobile}
+            end
+          />
+
+          <SidebarItem
+            to="/profile"
+            icon="profile"
+            label="My Profile"
+            collapsed={collapsed}
+            onNavigate={closeMobile}
+            end
+          />
+        </SidebarGroup>
+
+        {/* =================================================
+            BACKOFFICE
+        ================================================== */}
+
+        {isBackoffice && (
+          <>
+            {/* =============================================
+                USERS & ACCOUNTS MANAGEMENT
+            ============================================== */}
+
+            <SidebarGroup
+              title="Users & Accounts Management"
+              collapsed={collapsed}
+            >
+              {/* Exact route:
+                  does not stay selected on Pending or
+                  Deactivation pages.
+              */}
+
+              <SidebarItem
+                to="/backoffice/users"
+                icon="users"
+                label="Users & Accounts"
+                collapsed={collapsed}
+                onNavigate={closeMobile}
+                end
+              />
+
+              <SidebarItem
+                to="/backoffice/users/pending"
+                icon="pending"
+                label="Pending Activations"
+                collapsed={collapsed}
+                onNavigate={closeMobile}
+                end
+              />
+
+              <SidebarItem
+                to="/backoffice/users/deactivation-requests"
+                icon="deactivation"
+                label="Deactivation Requests"
+                collapsed={collapsed}
+                onNavigate={closeMobile}
+                end
+              />
+            </SidebarGroup>
+
+            {/* =============================================
+                ENERGY MANAGEMENT
+            ============================================== */}
+
+            <SidebarGroup
+              title="Energy Management"
+              collapsed={collapsed}
+            >
+              <SidebarItem
+                to="/backoffice/stations"
+                icon="station"
+                label="Stations"
+                collapsed={collapsed}
+                onNavigate={closeMobile}
+                end
+              />
+
+              <SidebarItem
+                to="/backoffice/slots"
+                icon="slots"
+                label="Energy Slots"
+                collapsed={collapsed}
+                onNavigate={closeMobile}
+                end
+              />
+            </SidebarGroup>
+          </>
+        )}
+
+        {/* =================================================
+            GRID OPERATOR
+        ================================================== */}
+
+        {isGridOperator && (
+          <SidebarGroup
+            title="Operations"
+            collapsed={collapsed}
+          >
+            <SidebarItem
+              to="/operator/reservations"
+              icon="reservations"
+              label="Reservations"
+              collapsed={collapsed}
+              onNavigate={closeMobile}
+            />
+          </SidebarGroup>
+        )}
+      </div>
+
+      {/* =================================================
+          BOTTOM STATUS
+      ================================================== */}
+
+      {!collapsed && (
+        <div className="shrink-0 border-t border-white/10 p-3">
+          <div className="rounded-xl border border-white/10 bg-white/[0.07] px-4 py-3">
+            <div className="flex items-center gap-2.5">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-40" />
+
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+              </span>
+
+              <p className="text-[12px] font-semibold text-white">
+                System Online
+              </p>
+            </div>
+
+            <p className="mt-1 text-[11px] font-medium text-blue-200/70">
+              Smart Solar Microgrid
+            </p>
+          </div>
+        </div>
+      )}
+    </aside>
+  )
 
   return (
     <>
+      {/* =================================================
+          DESKTOP
+      ================================================== */}
+
+      <div className="hidden h-full overflow-hidden lg:block">
+        {sidebar}
+      </div>
+
+      {/* =================================================
+          MOBILE
+      ================================================== */}
+
       {mobileOpen && (
-        <button
-          type="button"
-          aria-label="Close navigation overlay"
-          onClick={onMobileClose}
-          className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-sm lg:hidden"
-        />
-      )}
+        <div className="fixed inset-0 z-[80] lg:hidden">
+          <button
+            type="button"
+            aria-label="Close navigation"
+            onClick={
+              onCloseMobile
+            }
+            className="absolute inset-0 bg-slate-950/55 backdrop-blur-[2px]"
+          />
 
-      <aside
-        className={`${
-          mobileOpen
-            ? 'fixed inset-y-0 left-0 z-50 flex w-80'
-            : 'hidden'
-        } lg:static lg:z-auto lg:flex lg:min-h-screen ${
-          collapsed ? 'lg:w-24' : 'lg:w-80'
-        } shrink-0 flex-col border-r border-white/60 bg-[linear-gradient(180deg,_#e2ecf3_0%,_#edf4ff_100%)] shadow-xl transition-all duration-300`}
-      >
-        <div
-          className={`flex h-20 items-center border-b border-white/70 ${
-            collapsed
-              ? 'justify-center lg:px-3'
-              : 'justify-between px-5'
-          }`}
-        >
-          {!collapsed && (
-            <div>
-              <p className="text-lg font-bold text-slate-900">
-                Workspace
-              </p>
-              <p className="text-xs text-slate-500">
-                {roleLabel(user?.role)}
-              </p>
-            </div>
-          )}
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onToggle}
-              className="hidden h-10 w-10 items-center justify-center rounded-2xl bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 lg:flex"
-              aria-label={
-                collapsed
-                  ? 'Expand sidebar'
-                  : 'Collapse sidebar'
-              }
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-                className={`h-5 w-5 transition-transform ${
-                  collapsed ? 'rotate-180' : ''
-                }`}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15.75 19.5 8.25 12l7.5-7.5"
-                />
-              </svg>
-            </button>
-
-            <button
-              type="button"
-              onClick={onMobileClose}
-              className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 lg:hidden"
-              aria-label="Close navigation"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-                className="h-5 w-5"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18 18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
+          <div className="relative z-10 h-full w-[288px] overflow-hidden shadow-[20px_0_60px_rgba(0,0,0,0.25)]">
+            {sidebar}
           </div>
         </div>
-
-        <nav className="flex-1 overflow-y-auto px-3 py-5">
-          <div className="space-y-1">
-            <SectionTitle collapsed={collapsed}>
-              General
-            </SectionTitle>
-
-            <NavItem
-              to="/dashboard"
-              label="Overview"
-              collapsed={collapsed}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3.75 10.5 12 3l8.25 7.5v9a1.5 1.5 0 0 1-1.5 1.5h-13.5a1.5 1.5 0 0 1-1.5-1.5v-9Z"
-              />
-            </NavItem>
-
-            <NavItem
-              to="/profile"
-              label="My Profile"
-              collapsed={collapsed}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15.75 6.75a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25a7.5 7.5 0 0 1 15 0"
-              />
-            </NavItem>
-          </div>
-
-          {isBackoffice && (
-            <div className="mt-8 space-y-1">
-              <SectionTitle collapsed={collapsed}>
-                Administration
-              </SectionTitle>
-
-              <NavItem
-                to="/backoffice/dashboard"
-                label="Dashboard"
-                collapsed={collapsed}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M3 13.5 9 7.5l4 4 8-8M21 10V4h-6"
-                />
-              </NavItem>
-
-              <NavItem
-                to="/backoffice/users"
-                label="Users"
-                collapsed={collapsed}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M18 18.75a7.5 7.5 0 0 0-12 0M14.25 7.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM18.75 9.75a2.25 2.25 0 1 1 0 4.5m-13.5-4.5a2.25 2.25 0 1 0 0 4.5"
-                />
-              </NavItem>
-
-              <NavItem
-                to="/backoffice/users/pending"
-                label="Pending Activations"
-                collapsed={collapsed}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 6v6l3 2.25M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                />
-              </NavItem>
-
-              <NavItem
-                to="/backoffice/users/deactivation-requests"
-                label="Deactivation Requests"
-                collapsed={collapsed}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18 18 6M6 6l12 12"
-                />
-              </NavItem>
-            </div>
-          )}
-
-          {isBackoffice && (
-            <div className="mt-8 space-y-1">
-              <SectionTitle collapsed={collapsed}>
-                Energy Management
-              </SectionTitle>
-
-              <NavItem
-                to="/backoffice/stations"
-                label="Stations"
-                collapsed={collapsed}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 21s7-4.35 7-10a7 7 0 1 0-14 0c0 5.65 7 10 7 10Zm0-7.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"
-                />
-              </NavItem>
-
-              <NavItem
-                to="/backoffice/slots"
-                label="Energy Slots"
-                collapsed={collapsed}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M8.25 6.75h7.5M8.25 12h7.5M8.25 17.25h7.5"
-                />
-              </NavItem>
-            </div>
-          )}
-
-          {isOperator && (
-            <div className="mt-8 space-y-1">
-              <SectionTitle collapsed={collapsed}>
-                Grid Operations
-              </SectionTitle>
-
-              <NavItem
-                to="/operator/dashboard"
-                label="Dashboard"
-                collapsed={collapsed}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M3 13.5 9 7.5l4 4 8-8M21 10V4h-6"
-                />
-              </NavItem>
-
-              <NavItem
-                to="/operator/reservations"
-                label="Reservations"
-                collapsed={collapsed}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M7.5 3.75h9A2.25 2.25 0 0 1 18.75 6v12a2.25 2.25 0 0 1-2.25 2.25h-9A2.25 2.25 0 0 1 5.25 18V6A2.25 2.25 0 0 1 7.5 3.75Zm1.5 6.75 2 2 4-4.5"
-                />
-              </NavItem>
-            </div>
-          )}
-        </nav>
-
-        {!collapsed && (
-          <div className="border-t border-white/70 p-4">
-            <div className="rounded-2xl bg-white/80 p-4 shadow-sm">
-              <p className="truncate text-sm font-semibold text-slate-900">
-                {user?.fullName}
-              </p>
-              <p className="mt-1 text-xs text-slate-500">
-                NIC: {user?.nic}
-              </p>
-              <div className="mt-3 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
-                {roleLabel(user?.role)}
-              </div>
-            </div>
-          </div>
-        )}
-      </aside>
+      )}
     </>
   )
 }

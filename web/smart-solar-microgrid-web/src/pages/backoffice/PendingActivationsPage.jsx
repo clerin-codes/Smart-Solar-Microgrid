@@ -1,16 +1,21 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
+  useRef,
   useState,
 } from 'react'
 
-import Alert from '../../components/common/Alert'
-import ConfirmDialog from '../../components/common/ConfirmDialog'
+import toast from 'react-hot-toast'
 
+import ConfirmDialog from '../../components/common/ConfirmDialog'
+import LifecycleFilters from '../../components/users/LifecycleFilters'
+import LifecycleSummaryBanner from '../../components/users/LifecycleSummaryBanner'
+import PendingActivationsTable from '../../components/users/PendingActivationsTable'
 import {
-  CheckIcon,
-  RefreshIcon,
-} from '../../components/common/Icons'
+  buildVisiblePages,
+} from '../../components/users/userManagementUtils'
+import useAutoRefresh from '../../hooks/useAutoRefresh'
 
 import {
   activateUser,
@@ -18,268 +23,228 @@ import {
 } from '../../services/api/userService'
 
 import {
-  getApiErrorMessage,
-} from '../../utils/apiError'
+  getApiErrorMessage,} from '../../utils/apiError'
 
-import {
-  formatDate,
-} from '../../utils/userFormat'
+const PAGE_SIZE = 5
+const AUTO_REFRESH_MS = 5000
 
-export default function PendingActivationsPage() {
-  const [
-    users,
-    setUsers,
-  ] = useState([])
+/** Backoffice controller for reviewing and activating pending Prosumer accounts. */
+function PendingActivationsPage() {
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [pageError, setPageError] = useState('')
+  const [search, setSearch] = useState('')
+  const [sortOrder, setSortOrder] = useState('newest')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [activatingNic, setActivatingNic] = useState(null)
+  const [confirm, setConfirm] = useState(null)
+  const requestInFlightRef = useRef(false)
 
-  const [
-    loading,
-    setLoading,
-  ] = useState(true)
+  const loadPendingUsers = useCallback(
+    async ({ showLoader = false } = {}) => {
+      if (requestInFlightRef.current) {
+        return
+      }
 
-  const [
-    error,
-    setError,
-  ] = useState('')
+      requestInFlightRef.current = true
 
-  const [
-    success,
-    setSuccess,
-  ] = useState('')
-
-  const [
-    selected,
-    setSelected,
-  ] = useState(null)
-
-  const [
-    actionLoading,
-    setActionLoading,
-  ] = useState(false)
-
-  const load =
-    useCallback(async () => {
-      try {
+      if (showLoader) {
         setLoading(true)
-        setError('')
+      }
 
-        const data =
-          await getPendingActivations()
-
-        setUsers(
-          Array.isArray(data)
-            ? data
-            : []
-        )
-      } catch (requestError) {
-        setError(
+      try {
+        const data = await getPendingActivations()
+        setUsers(Array.isArray(data) ? data : [])
+        setPageError('')
+      } catch (error) {
+        setPageError(
           getApiErrorMessage(
-            requestError,
-            'Unable to load pending activations.'
-          )
+            error,
+            'Unable to load pending activations.',
+          ),
         )
       } finally {
-        setLoading(false)
+        requestInFlightRef.current = false
+
+        if (showLoader) {
+          setLoading(false)
+        }
       }
-    }, [])
+    },
+    [],
+  )
 
   useEffect(() => {
-    load()
-  }, [load])
+    loadPendingUsers({ showLoader: true })
+  }, [loadPendingUsers])
 
-  async function approve() {
-    if (!selected) {
-      return
+  useAutoRefresh(loadPendingUsers, AUTO_REFRESH_MS)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [
+    search,
+    sortOrder,
+  ])
+
+  const filteredUsers = useMemo(() => {
+    const searchValue = search.trim().toLowerCase()
+
+    const matchingUsers = users.filter((user) => {
+      if (!searchValue) {
+        return true
+      }
+
+      return [
+        user.fullName,
+        user.nic,
+        user.email,
+        user.phoneNumber,
+      ]
+        .filter(Boolean)
+        .some((field) =>
+          String(field).toLowerCase().includes(searchValue),
+        )
+    })
+
+    return [...matchingUsers].sort((first, second) => {
+      if (sortOrder === 'name') {
+        return String(first.fullName ?? '').localeCompare(
+          String(second.fullName ?? ''),
+        )
+      }
+
+      const firstDate = new Date(first.createdAt ?? 0).getTime()
+      const secondDate = new Date(second.createdAt ?? 0).getTime()
+
+      return sortOrder === 'oldest'
+        ? firstDate - secondDate
+        : secondDate - firstDate
+    })
+  }, [
+    users,
+    search,
+    sortOrder,
+  ])
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredUsers.length / PAGE_SIZE),
+  )
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
     }
+  }, [
+    currentPage,
+    totalPages,
+  ])
+
+  const paginatedUsers = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE
+    return filteredUsers.slice(start, start + PAGE_SIZE)
+  }, [
+    filteredUsers,
+    currentPage,
+  ])
+
+  const visiblePages = useMemo(
+    () => buildVisiblePages(currentPage, totalPages),
+    [
+      currentPage,
+      totalPages,
+    ],
+  )
+
+  async function handleActivate(user) {
+    setActivatingNic(user.nic)
 
     try {
-      setActionLoading(true)
-      setError('')
-
-      await activateUser(
-        selected.nic
-      )
-
-      setSuccess(
-        `${selected.fullName} was activated successfully.`
-      )
-
-      setSelected(null)
-
-      await load()
-    } catch (requestError) {
-      setError(
+      await activateUser(user.nic)
+      toast.success(`${user.fullName} activated successfully.`)
+      setConfirm(null)
+      await loadPendingUsers()
+    } catch (error) {
+      toast.error(
         getApiErrorMessage(
-          requestError,
-          'Unable to activate this account.'
-        )
+          error,
+          'Unable to activate account.',
+        ),
       )
     } finally {
-      setActionLoading(false)
+      setActivatingNic(null)
     }
   }
 
+  function clearFilters() {
+    setSearch('')
+    setSortOrder('newest')
+  }
+
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-semibold text-amber-600">
-            Prosumer Approval
-          </p>
+    <div className="space-y-5">
+      <section>
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-[-0.035em] text-slate-950">
+              Pending Activations
+            </h1>
 
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
-            Pending Activations
-          </h1>
-
-          <p className="mt-2 text-sm text-slate-500">
-            Review mobile Prosumer
-            registrations waiting for
-            Backoffice activation.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={load}
-          disabled={
-            loading
-          }
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
-        >
-          <RefreshIcon className="h-4 w-4" />
-          Refresh
-        </button>
-      </header>
-
-      <Alert type="success">
-        {success}
-      </Alert>
-
-      <Alert type="error">
-        {error}
-      </Alert>
-
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        {loading ? (
-          <div className="p-10 text-center text-sm text-slate-500">
-            Loading pending accounts...
-          </div>
-        ) : users.length ===
-          0 ? (
-          <div className="p-12 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-              <CheckIcon className="h-6 w-6" />
-            </div>
-
-            <h2 className="mt-4 font-bold text-slate-800">
-              Queue is clear
-            </h2>
-
-            <p className="mt-1 text-sm text-slate-500">
-              There are no Prosumer
-              accounts waiting for
-              activation.
+            <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-500">
+              Review and activate Solar Prosumer registrations awaiting Backoffice approval.
             </p>
           </div>
-        ) : (
-          <div className="divide-y divide-slate-100">
-            {users.map(
-              (account) => (
-                <div
-                  key={
-                    account.nic
-                  }
-                  className="flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between"
-                >
-                  <div className="grid flex-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                        Prosumer
-                      </p>
 
-                      <p className="mt-1 text-sm font-semibold text-slate-900">
-                        {
-                          account.fullName
-                        }
-                      </p>
+          <LifecycleSummaryBanner
+            type="pending"
+            count={users.length}
+          />
+        </div>
+      </section>
 
-                      <p className="mt-1 font-mono text-xs text-slate-500">
-                        {account.nic}
-                      </p>
-                    </div>
+      <LifecycleFilters
+        search={search}
+        sortOrder={sortOrder}
+        pageError={pageError}
+        onSearchChange={setSearch}
+        onSortChange={setSortOrder}
+        onClear={clearFilters}
+      />
 
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                        Email
-                      </p>
-
-                      <p className="mt-1 text-sm text-slate-700">
-                        {account.email}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                        Mobile
-                      </p>
-
-                      <p className="mt-1 text-sm text-slate-700">
-                        {
-                          account.phoneNumber
-                        }
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                        Registered
-                      </p>
-
-                      <p className="mt-1 text-sm text-slate-700">
-                        {formatDate(
-                          account.createdAt
-                        )}
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSelected(
-                        account
-                      )
-                    }
-                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
-                  >
-                    <CheckIcon className="h-4 w-4" />
-                    Approve & activate
-                  </button>
-                </div>
-              )
-            )}
-          </div>
-        )}
-      </div>
+      <PendingActivationsTable
+        loading={loading}
+        users={paginatedUsers}
+        activatingNic={activatingNic}
+        totalItems={filteredUsers.length}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        pageSize={PAGE_SIZE}
+        visiblePages={visiblePages}
+        onPageChange={setCurrentPage}
+        onActivate={setConfirm}
+      />
 
       <ConfirmDialog
-        open={
-          Boolean(selected)
-        }
-        title="Approve Prosumer account?"
+        open={Boolean(confirm)}
+        title="Activate Account?"
         message={
-          selected
-            ? `Activate ${selected.fullName} (${selected.nic}) and allow this Prosumer to authenticate?`
+          confirm
+            ? `This will activate ${confirm.fullName}'s Solar Prosumer account and allow platform access.`
             : ''
         }
-        confirmText="Approve account"
-        loading={
-          actionLoading
-        }
-        onCancel={() =>
-          setSelected(null)
-        }
-        onConfirm={approve}
+        confirmText="Activate Account"
+        tone="success"
+        loading={Boolean(confirm && activatingNic === confirm.nic)}
+        onCancel={() => setConfirm(null)}
+        onConfirm={() => {
+          if (confirm) {
+            handleActivate(confirm)
+          }
+        }}
       />
     </div>
   )
 }
+
+export default PendingActivationsPage

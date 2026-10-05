@@ -13,11 +13,11 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use(
   (config) => {
+    // Attach the current JWT to every protected REST request.
     const token = localStorage.getItem("accessToken");
 
     if (token) {
       config.headers = config.headers ?? {};
-
       config.headers.Authorization = `Bearer ${token}`;
     }
 
@@ -28,15 +28,13 @@ apiClient.interceptors.request.use(
 
 apiClient.interceptors.response.use(
   (response) => response,
-
   (error) => {
+    // A 401 with an existing session means the token is no longer usable.
     const hasStoredToken = Boolean(localStorage.getItem("accessToken"));
 
     if (error?.response?.status === 401 && hasStoredToken) {
       localStorage.removeItem("accessToken");
-
       localStorage.removeItem("authUser");
-
       window.dispatchEvent(new Event("auth:unauthorized"));
     }
 

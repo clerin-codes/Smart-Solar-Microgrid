@@ -1,143 +1,49 @@
-import { useEffect, useMemo, useState } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 
 import {
   getApiErrorMessage,
   getApiFieldErrors,
 } from '../../utils/apiError'
 
-const INITIAL_CREATE_FORM = {
-  nic: '',
-  fullName: '',
-  email: '',
-  phoneNumber: '',
-  password: '',
-  role: '',
-}
+import CreateUserFormContent from './CreateUserFormContent'
+import EditUserFormContent from './EditUserFormContent'
+import {
+  CloseIcon,
+  UserIcon,
+} from './UserFormIcons'
+import {
+  buildUserPayload,
+  EMPTY_USER_FORM,
+  normalizeFieldErrors,
+  validateUserForm,
+} from './userFormValidation'
 
-const NIC_PATTERN = /^(?:\d{12}|\d{9}[vVxX])$/
-const PHONE_PATTERN = /^(?:\+94|0)7\d{8}$/
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const NAME_PATTERN =
-  /^\p{L}[\p{L}\p{M}\s.'-]*$/u
-
-function validatePassword(password) {
-  const errors = []
-
-  if (password.length < 12 || password.length > 128) {
-    errors.push('12–128 characters')
-  }
-  if (!/[A-Z]/.test(password)) {
-    errors.push('at least one uppercase letter')
-  }
-  if (!/[a-z]/.test(password)) {
-    errors.push('at least one lowercase letter')
-  }
-  if (!/\d/.test(password)) {
-    errors.push('at least one number')
-  }
-  if (!/[^A-Za-z0-9\s]/.test(password)) {
-    errors.push('at least one special character')
-  }
-  if (password !== password.trim()) {
-    errors.push('no leading or trailing spaces')
-  }
-
-  return errors.length
-    ? `Password must include ${errors.join(', ')}.`
-    : ''
-}
-
-function validateForm(form, mode) {
-  const errors = {}
-
-  if (mode === 'create' && !NIC_PATTERN.test(form.nic.trim())) {
-    errors.nic = 'Enter a valid Sri Lankan NIC.'
-  }
-
-  const fullName = form.fullName.trim()
-  if (fullName.length < 2 || fullName.length > 100) {
-    errors.fullName =
-      'Full name must contain 2–100 characters.'
-  } else if (!NAME_PATTERN.test(fullName)) {
-    errors.fullName =
-      'Use letters, spaces, apostrophes, periods or hyphens only.'
-  }
-
-  if (!EMAIL_PATTERN.test(form.email.trim())) {
-    errors.email = 'Enter a valid email address.'
-  }
-
-  if (!PHONE_PATTERN.test(form.phoneNumber.trim())) {
-    errors.phoneNumber =
-      'Use 07XXXXXXXX or +947XXXXXXXX.'
-  }
-
-  if (mode === 'create') {
-    const passwordError = validatePassword(form.password)
-    if (passwordError) errors.password = passwordError
-
-    if (
-      !['Backoffice', 'GridOperator'].includes(form.role)
-    ) {
-      errors.role =
-        'Select Backoffice or Grid Operator.'
-    }
-  }
-
-  return errors
-}
-
-function FieldLabel({
-  htmlFor,
-  children,
-  required = false,
-}) {
-  return (
-    <label
-      htmlFor={htmlFor}
-      className="text-sm font-semibold text-slate-700"
-    >
-      {children}
-      {required && (
-        <span className="ml-1 text-red-500">*</span>
-      )}
-    </label>
-  )
-}
-
-function FieldError({ message }) {
-  if (!message) return null
-
-  return (
-    <p className="mt-1.5 text-xs font-medium text-red-600">
-      {message}
-    </p>
-  )
-}
-
+/**
+ * Coordinates create/edit user form state while the visual sections live in
+ * focused child components. API validation remains authoritative.
+ */
 function UserFormModal({
   open,
-  mode,
+  mode = 'create',
   user,
   onClose,
   onSubmit,
 }) {
   const isEdit = mode === 'edit'
-
-  const [form, setForm] = useState(INITIAL_CREATE_FORM)
+  const [form, setForm] = useState(EMPTY_USER_FORM)
   const [errors, setErrors] = useState({})
-  const [generalError, setGeneralError] = useState('')
+  const [apiError, setApiError] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [showPassword, setShowPassword] =
-    useState(false)
-
-  const title = useMemo(
-    () => (isEdit ? 'Edit User' : 'Create Web User'),
-    [isEdit],
-  )
+  const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
-    if (!open) return
+    if (!open) {
+      return
+    }
 
     if (isEdit && user) {
       setForm({
@@ -149,19 +55,58 @@ function UserFormModal({
         role: user.role ?? '',
       })
     } else {
-      setForm(INITIAL_CREATE_FORM)
+      setForm(EMPTY_USER_FORM)
     }
 
     setErrors({})
-    setGeneralError('')
+    setApiError('')
     setSubmitting(false)
     setShowPassword(false)
-  }, [open, isEdit, user])
+  }, [
+    open,
+    isEdit,
+    user,
+  ])
 
-  if (!open) return null
+  useEffect(() => {
+    if (!open) {
+      return undefined
+    }
 
-  function handleChange(event) {
-    const { name, value } = event.target
+    function handleEscape(event) {
+      if (event.key === 'Escape' && !submitting) {
+        onClose()
+      }
+    }
+
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [
+    open,
+    submitting,
+    onClose,
+  ])
+
+  const passwordChecks = useMemo(
+    () => ({
+      length: form.password.length >= 12,
+      uppercase: /[A-Z]/.test(form.password),
+      lowercase: /[a-z]/.test(form.password),
+      number: /\d/.test(form.password),
+      special: /[^A-Za-z0-9]/.test(form.password),
+    }),
+    [form.password],
+  )
+
+  if (!open) {
+    return null
+  }
+
+  function updateField(event) {
+    const {
+      name,
+      value,
+    } = event.target
 
     setForm((current) => ({
       ...current,
@@ -170,317 +115,171 @@ function UserFormModal({
 
     setErrors((current) => ({
       ...current,
-      [name]: undefined,
-      NIC: undefined,
+      [name]: '',
     }))
+
+    setApiError('')
+  }
+
+  function selectRole(role) {
+    if (isEdit) {
+      return
+    }
+
+    setForm((current) => ({
+      ...current,
+      role,
+    }))
+
+    setErrors((current) => ({
+      ...current,
+      role: '',
+    }))
+
+    setApiError('')
   }
 
   async function handleSubmit(event) {
     event.preventDefault()
+    setApiError('')
 
-    const validationErrors = validateForm(form, mode)
+    const validationErrors = validateUserForm(form, isEdit)
+    setErrors(validationErrors)
 
-    if (Object.keys(validationErrors).length) {
-      setErrors(validationErrors)
+    if (Object.keys(validationErrors).length > 0) {
       return
     }
 
-    setSubmitting(true)
-    setGeneralError('')
-
     try {
-      const payload = isEdit
-        ? {
-            fullName: form.fullName.trim(),
-            email: form.email.trim(),
-            phoneNumber: form.phoneNumber.trim(),
-          }
-        : {
-            nic: form.nic.trim(),
-            fullName: form.fullName.trim(),
-            email: form.email.trim(),
-            phoneNumber: form.phoneNumber.trim(),
-            password: form.password,
-            role: form.role,
-          }
-
-      await onSubmit(payload)
-      onClose()
+      setSubmitting(true)
+      await onSubmit(buildUserPayload(form, isEdit))
     } catch (error) {
-      setErrors(getApiFieldErrors(error))
-      setGeneralError(
-        getApiErrorMessage(error, 'Unable to save user.'),
+      setErrors((current) => ({
+        ...current,
+        ...normalizeFieldErrors(getApiFieldErrors(error)),
+      }))
+
+      setApiError(
+        getApiErrorMessage(
+          error,
+          isEdit
+            ? 'Unable to update user.'
+            : 'Unable to create user.',
+        ),
       )
     } finally {
       setSubmitting(false)
     }
   }
 
-  const inputClass =
-    'mt-1.5 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100'
-
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-slate-950/50 px-4 py-8 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[2px]"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !submitting) {
+          onClose()
+        }
+      }}
+    >
       <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="user-form-title"
-        className="w-full max-w-3xl overflow-hidden rounded-3xl border border-white/70 bg-white shadow-2xl"
+        className={`flex max-h-[94vh] w-full flex-col overflow-hidden border border-slate-200 bg-white shadow-[0_30px_90px_rgba(15,23,42,0.24)] ${
+          isEdit
+            ? 'max-w-[960px] rounded-[24px]'
+            : 'max-w-4xl rounded-[22px]'
+        }`}
       >
-        <div className="bg-gradient-to-r from-slate-900 via-blue-900 to-sky-700 px-6 py-6 text-white">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">
-                Backoffice Administration
-              </p>
-              <h2
-                id="user-form-title"
-                className="mt-2 text-2xl font-bold"
-              >
-                {title}
-              </h2>
-              <p className="mt-2 text-sm text-blue-100/90">
-                {isEdit
-                  ? 'Update safe editable user information.'
-                  : 'Create a secure Backoffice or Grid Operator web account.'}
-              </p>
+        <div
+          className={`flex items-start justify-between border-b border-slate-200 ${
+            isEdit
+              ? 'bg-gradient-to-r from-white via-white to-slate-50/80 px-8 py-6'
+              : 'px-7 py-5'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className={`flex items-center justify-center rounded-xl ${
+                isEdit
+                  ? 'h-11 w-11 bg-orange-50 text-orange-600 ring-1 ring-orange-100'
+                  : 'h-10 w-10 bg-blue-50 text-blue-800'
+              }`}
+            >
+              <UserIcon />
             </div>
 
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={submitting}
-              className="rounded-2xl bg-white/10 p-2 text-white transition hover:bg-white/20"
-              aria-label="Close"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-                className="h-5 w-5"
+            <div>
+              <h2
+                className={`font-bold tracking-[-0.03em] text-slate-950 ${
+                  isEdit ? 'text-[25px]' : 'text-2xl'
+                }`}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18 18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
+                {isEdit ? 'Edit User' : 'Create User'}
+              </h2>
+
+              <p className="mt-1 text-[15px] text-slate-500">
+                {isEdit
+                  ? 'Update the user account information.'
+                  : 'Create a new web portal account.'}
+              </p>
+            </div>
           </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={submitting}
+            aria-label="Close"
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+          >
+            <CloseIcon />
+          </button>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="p-6 sm:p-7"
-        >
-          <div className="mb-6 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-            <p className="text-sm text-slate-600">
-              Fields marked with
-              <span className="mx-1 font-semibold text-red-500">
-                *
-              </span>
-              are required.
-            </p>
-
-            <div className="hidden rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 sm:block">
-              {isEdit ? 'Edit Mode' : 'Create Mode'}
-            </div>
-          </div>
-
-          {generalError && (
-            <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {generalError}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-            <div>
-              <FieldLabel
-                htmlFor="fullName"
-                required
-              >
-                Full Name
-              </FieldLabel>
-              <input
-                id="fullName"
-                name="fullName"
-                value={form.fullName}
-                onChange={handleChange}
-                className={inputClass}
-                autoComplete="name"
-                placeholder="Enter full name"
-              />
-              <FieldError
-                message={errors.fullName}
-              />
-            </div>
-
-            {isEdit ? (
-              <div>
-                <FieldLabel htmlFor="nic">
-                  NIC
-                </FieldLabel>
-                <div className="mt-1.5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600">
-                  {form.nic}
-                </div>
-              </div>
-            ) : (
-              <div>
-                <FieldLabel
-                  htmlFor="nic"
-                  required
-                >
-                  NIC
-                </FieldLabel>
-                <input
-                  id="nic"
-                  name="nic"
-                  value={form.nic}
-                  onChange={handleChange}
-                  className={inputClass}
-                  placeholder="200012345678"
-                  autoComplete="off"
-                />
-                <FieldError
-                  message={errors.nic || errors.NIC}
-                />
-              </div>
-            )}
-
-            <div>
-              <FieldLabel
-                htmlFor="email"
-                required
-              >
-                Email Address
-              </FieldLabel>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                value={form.email}
-                onChange={handleChange}
-                className={inputClass}
-                autoComplete="email"
-                placeholder="name@example.com"
-              />
-              <FieldError message={errors.email} />
-            </div>
-
-            <div>
-              <FieldLabel
-                htmlFor="phoneNumber"
-                required
-              >
-                Mobile Number
-              </FieldLabel>
-              <input
-                id="phoneNumber"
-                name="phoneNumber"
-                value={form.phoneNumber}
-                onChange={handleChange}
-                className={inputClass}
-                autoComplete="tel"
-                placeholder="0771234567"
-              />
-              <FieldError
-                message={errors.phoneNumber}
-              />
-            </div>
-
-            {isEdit ? (
-              <div>
-                <FieldLabel htmlFor="role">
-                  Role
-                </FieldLabel>
-                <div className="mt-1.5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600">
-                  {form.role === 'GridOperator'
-                    ? 'Grid Operator'
-                    : form.role}
-                </div>
-              </div>
-            ) : (
-              <div>
-                <FieldLabel
-                  htmlFor="role"
-                  required
-                >
-                  Role
-                </FieldLabel>
-                <select
-                  id="role"
-                  name="role"
-                  value={form.role}
-                  onChange={handleChange}
-                  className={inputClass}
-                >
-                  <option value="">Select role</option>
-                  <option value="Backoffice">
-                    Backoffice
-                  </option>
-                  <option value="GridOperator">
-                    Grid Operator
-                  </option>
-                </select>
-                <FieldError message={errors.role} />
-              </div>
-            )}
-
-            {!isEdit && (
-              <div className="md:col-span-2">
-                <FieldLabel
-                  htmlFor="password"
-                  required
-                >
-                  Temporary Password
-                </FieldLabel>
-
-                <div className="relative">
-                  <input
-                    id="password"
-                    name="password"
-                    type={
-                      showPassword ? 'text' : 'password'
-                    }
-                    value={form.password}
-                    onChange={handleChange}
-                    className={`${inputClass} pr-20`}
-                    autoComplete="new-password"
-                    placeholder="Enter temporary password"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowPassword((current) => !current)
-                    }
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-blue-600 transition hover:text-blue-700"
-                  >
-                    {showPassword ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-
-                <p className="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-500">
-                  Password must be 12–128 characters and
-                  contain uppercase, lowercase, number,
-                  and special character.
+        <form onSubmit={handleSubmit} noValidate className="flex min-h-0 flex-1 flex-col">
+          <div className={`overflow-y-auto ${isEdit ? 'px-8 py-6' : 'px-7 py-6'}`}>
+            {apiError && (
+              <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3.5">
+                <p className="text-[15px] font-semibold text-red-700">
+                  Unable to save user
                 </p>
-
-                <FieldError
-                  message={errors.password}
-                />
+                <p className="mt-1 text-sm leading-6 text-red-600">
+                  {apiError}
+                </p>
               </div>
+            )}
+
+            {isEdit ? (
+              <EditUserFormContent
+                form={form}
+                errors={errors}
+                submitting={submitting}
+                onFieldChange={updateField}
+              />
+            ) : (
+              <CreateUserFormContent
+                form={form}
+                errors={errors}
+                submitting={submitting}
+                showPassword={showPassword}
+                passwordChecks={passwordChecks}
+                onFieldChange={updateField}
+                onSelectRole={selectRole}
+                onTogglePassword={() =>
+                  setShowPassword((current) => !current)
+                }
+              />
             )}
           </div>
 
-          <div className="mt-7 flex justify-end gap-3 border-t border-slate-100 pt-5">
+          <div
+            className={`flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50/70 ${
+              isEdit ? 'px-8 py-4.5' : 'px-7 py-4'
+            }`}
+          >
             <button
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+              className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-6 text-[15px] font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Cancel
             </button>
@@ -488,13 +287,29 @@ function UserFormModal({
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-2xl bg-gradient-to-r from-blue-600 to-sky-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition hover:from-blue-700 hover:to-sky-600 disabled:cursor-not-allowed disabled:opacity-60"
+              className={`inline-flex h-11 min-w-[145px] items-center justify-center gap-2 rounded-xl px-6 text-[15px] font-semibold text-white shadow-sm transition focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60 ${
+                isEdit
+                  ? 'bg-orange-500 shadow-[0_5px_14px_rgba(249,115,22,0.20)] hover:bg-orange-600 hover:shadow-[0_7px_18px_rgba(249,115,22,0.26)] focus:ring-orange-100'
+                  : 'bg-blue-800 hover:bg-blue-900 focus:ring-blue-100'
+              }`}
             >
-              {submitting
-                ? 'Saving...'
-                : isEdit
-                  ? 'Save Changes'
-                  : 'Create User'}
+              {submitting ? (
+                <>
+                  <span
+                    className={`h-4 w-4 animate-spin rounded-full border-2 border-t-white ${
+                      isEdit ? 'border-orange-200' : 'border-blue-300'
+                    }`}
+                  />
+                  {isEdit ? 'Saving...' : 'Creating...'}
+                </>
+              ) : isEdit ? (
+                'Save Changes'
+              ) : (
+                <>
+                  <UserIcon />
+                  Create User
+                </>
+              )}
             </button>
           </div>
         </form>

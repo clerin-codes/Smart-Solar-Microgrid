@@ -11,6 +11,7 @@ const STATUS_BY_NUMBER = {
   3: "Deactivated",
 };
 
+/** Normalizes numeric or string role values returned by the API. */
 export function normalizeRole(role) {
   if (typeof role === "number") {
     return ROLE_BY_NUMBER[role] ?? String(role);
@@ -23,6 +24,7 @@ export function normalizeRole(role) {
   return role ?? "";
 }
 
+/** Normalizes numeric or string account-status values returned by the API. */
 export function normalizeStatus(status) {
   if (typeof status === "number") {
     return STATUS_BY_NUMBER[status] ?? String(status);
@@ -38,19 +40,15 @@ export function normalizeStatus(status) {
 export function getRoleLabel(role) {
   const normalized = normalizeRole(role);
 
-  switch (normalized) {
-    case "Backoffice":
-      return "Backoffice";
-
-    case "GridOperator":
-      return "Grid Operator";
-
-    case "Prosumer":
-      return "Solar Prosumer";
-
-    default:
-      return normalized || "Unknown";
+  if (normalized === "GridOperator") {
+    return "Grid Operator";
   }
+
+  if (normalized === "Prosumer") {
+    return "Solar Prosumer";
+  }
+
+  return normalized || "Unknown";
 }
 
 export function getStatusLabel(status) {
@@ -59,62 +57,13 @@ export function getStatusLabel(status) {
   switch (normalized) {
     case "Active":
       return "Active";
-
     case "PendingActivation":
       return "Pending Activation";
-
     case "DeactivationRequested":
       return "Deactivation Requested";
-
     case "Deactivated":
       return "Deactivated";
-
     default:
       return normalized || "Unknown";
   }
-}
-
-export function getInitials(fullName) {
-  if (!fullName) {
-    return "U";
-  }
-
-  return fullName
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("");
-}
-
-export function formatDate(value) {
-  if (!value) {
-    return "—";
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "—";
-  }
-
-  return date.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-export function formatDateTime(value) {
-  if (!value) {
-    return "—";
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "—";
-  }
-
-  return date.toLocaleString();
 }
