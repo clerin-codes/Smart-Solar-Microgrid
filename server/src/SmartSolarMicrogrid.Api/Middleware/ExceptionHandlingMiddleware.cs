@@ -1,6 +1,6 @@
 /*
  * Smart Solar Microgrid Trading System
- * Author: Shakanyah - IT23214002
+ * Author: Sahanya - IT23214002
  * Author: Sithmi - IT23241114
  * Author: Clerin - IT23402584
  * Author: Thuverakan - IT23281332

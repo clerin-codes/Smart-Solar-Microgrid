@@ -2,11 +2,9 @@
  * Smart Solar Microgrid Trading System
  * Author: Shakanyah - IT23214002
  * File: UserDetails.cs
- * Purpose: Defines the MongoDB user-account document
- *          used for authentication and account management.
+ * Purpose: Defines the MongoDB account document used for authentication and lifecycle management.
  */
 
-using System.Text.Json.Serialization;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
@@ -14,19 +12,12 @@ namespace SmartSolarMicrogrid.Api.Models;
 
 public class UserDetails
 {
-    // ======================================================
-    // Primary Identifier
-    // ======================================================
-
-    // NIC is used as the MongoDB document primary key.
+    // NIC is the immutable MongoDB primary key required by the assignment.
     [BsonId]
     public string NIC { get; set; } =
         string.Empty;
 
-    // ======================================================
-    // Personal Information
-    // ======================================================
-
+    // Store the account holder's editable personal/contact information.
     public string FullName { get; set; } =
         string.Empty;
 
@@ -36,60 +27,32 @@ public class UserDetails
     public string PhoneNumber { get; set; } =
         string.Empty;
 
-    // ======================================================
-    // Authentication Information
-    // ======================================================
-
-    // Only the BCrypt hash is stored.
-    // Plain-text passwords must never be stored.
+    // Store only a BCrypt hash; plain-text passwords must never be persisted.
     public string PasswordHash { get; set; } =
         string.Empty;
 
-    // ======================================================
-    // Authorization Role
-    // ======================================================
-
-    // Store the enum as a readable MongoDB string:
-    // "Backoffice", "GridOperator", or "Prosumer".
+    // Store role values as readable strings in MongoDB.
     [BsonRepresentation(BsonType.String)]
     public UserRole Role { get; set; }
 
-    // ======================================================
-    // Account Lifecycle
-    // ======================================================
-
-    // Indicates whether the account is currently allowed
-    // to authenticate and use protected API operations.
+    // IsActive provides a fast authentication gate while Status records the lifecycle state.
     public bool IsActive { get; set; } =
         true;
 
-    /// <summary>
-    /// Profile picture as base64 (no "data:" prefix), JPEG, PNG or WebP. Kept out of the raw user JSON
-    /// (GET /api/users) so those lists stay small; the profile endpoints return it.
-    /// </summary>
-    [BsonIgnoreIfNull]
-    [JsonIgnore]
-    public string? ProfileImage { get; set; }
-
-    // Store lifecycle status as a readable MongoDB string:
-    // "Active",
-    // "PendingActivation",
-    // "DeactivationRequested",
-    // or "Deactivated".
     [BsonRepresentation(BsonType.String)]
     public AccountStatus Status { get; set; } =
         AccountStatus.Active;
 
-    // Records when a Prosumer requested account deactivation.
+    // Record the request time only when a Prosumer asks for deactivation.
+    [BsonIgnoreIfNull]
     public DateTime? DeactivationRequestedAt { get; set; }
 
-    // ======================================================
-    // Audit Information
-    // ======================================================
-
+    // Maintain UTC audit timestamps for creation and the latest account update.
+    [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
     public DateTime CreatedAt { get; set; } =
         DateTime.UtcNow;
 
+    [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
     public DateTime UpdatedAt { get; set; } =
         DateTime.UtcNow;
 }

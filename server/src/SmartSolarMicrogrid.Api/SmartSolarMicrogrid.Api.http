@@ -1,6 +1,156 @@
-@SmartSolarMicrogrid.Api_HostAddress = http://localhost:5130
+@host = http://localhost:5130
+@token = REPLACE_WITH_JWT_ACCESS_TOKEN
+@prosumerNic = REPLACE_WITH_PROSUMER_NIC
+@managedNic = REPLACE_WITH_MANAGED_USER_NIC
 
-GET {{SmartSolarMicrogrid.Api_HostAddress}}/weatherforecast/
+### =====================================================
+### System health
+### =====================================================
+GET {{host}}/api/health
 Accept: application/json
 
 ###
+
+### =====================================================
+### Authentication
+### =====================================================
+POST {{host}}/api/Auth/login
+Content-Type: application/json
+
+{
+  "nic": "REPLACE_WITH_TEST_NIC",
+  "password": "REPLACE_WITH_TEST_PASSWORD"
+}
+
+###
+
+### =====================================================
+### Solar Prosumer self-registration
+### Creates PendingActivation; Backoffice must activate it.
+### =====================================================
+POST {{host}}/api/Auth/register-prosumer
+Content-Type: application/json
+
+{
+  "nic": "200012345678",
+  "fullName": "Sample Prosumer",
+  "email": "sample.prosumer@example.com",
+  "phoneNumber": "0771234567",
+  "password": "ReplaceThis1!"
+}
+
+###
+
+### =====================================================
+### Current authenticated account
+### =====================================================
+GET {{host}}/api/Account/me
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+
+PUT {{host}}/api/Account/me
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "fullName": "Updated Account Name",
+  "email": "updated.account@example.com",
+  "phoneNumber": "0777654321"
+}
+
+###
+
+POST {{host}}/api/Account/change-password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "currentPassword": "REPLACE_WITH_CURRENT_PASSWORD",
+  "newPassword": "ReplaceWithNew1!",
+  "confirmNewPassword": "ReplaceWithNew1!"
+}
+
+###
+
+### Prosumer only
+POST {{host}}/api/Account/deactivation-request
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+
+### =====================================================
+### Backoffice user/prosumer administration
+### =====================================================
+GET {{host}}/api/Users
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+
+GET {{host}}/api/Users/pending-activations
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+
+GET {{host}}/api/Users/deactivation-requests
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+
+GET {{host}}/api/Users/{{managedNic}}
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+
+### Create Backoffice/Grid Operator only
+POST {{host}}/api/Users
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nic": "200087654321",
+  "fullName": "Sample Grid Operator",
+  "email": "sample.operator@example.com",
+  "phoneNumber": "0771112233",
+  "password": "ReplaceThis1!",
+  "role": "GridOperator"
+}
+
+###
+
+PUT {{host}}/api/Users/{{managedNic}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "fullName": "Updated Managed User",
+  "email": "managed.user@example.com",
+  "phoneNumber": "0773334455"
+}
+
+###
+
+### Activate pending Prosumer
+POST {{host}}/api/Users/{{prosumerNic}}/activate
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+
+### Soft-deactivate / finalize deactivation
+DELETE {{host}}/api/Users/{{managedNic}}
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+
+### Reactivate finalized deactivated account
+POST {{host}}/api/Users/{{managedNic}}/reactivate
+Authorization: Bearer {{token}}
+Accept: application/json

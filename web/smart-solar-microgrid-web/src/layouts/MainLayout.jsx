@@ -1,46 +1,77 @@
-import { useState } from 'react'
-import { Outlet } from 'react-router-dom'
-import { NavLink } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import {
+  useState,
+} from 'react'
 
-import Navbar from '../components/common/Navbar'
+import {
+  Outlet,
+} from 'react-router-dom'
+
 import Sidebar from '../components/common/Sidebar'
+import Navbar from '../components/common/Navbar'
 
 function MainLayout() {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const { user } = useAuth()
+  const [
+    collapsed,
+    setCollapsed,
+  ] = useState(false)
+
+  const [
+    mobileOpen,
+    setMobileOpen,
+  ] = useState(false)
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,_#dbeafe_0,_#f8fafc_32rem)]">
-      <div className="flex min-h-screen">
+    <div className="flex h-screen overflow-hidden bg-[#F6F8FC] text-slate-900">
+      {/* ===============================================
+          SIDEBAR
+      ================================================ */}
 
-        {/* Sidebar */}
-        <Sidebar
-          collapsed={sidebarCollapsed}
-          onToggle={() =>
-            setSidebarCollapsed((current) => !current)
+      <Sidebar
+        collapsed={
+          collapsed
+        }
+        onToggle={() =>
+          setCollapsed(
+            (current) =>
+              !current,
+          )
+        }
+        mobileOpen={
+          mobileOpen
+        }
+        onCloseMobile={() =>
+          setMobileOpen(
+            false,
+          )
+        }
+      />
+
+      {/* ===============================================
+          MAIN AREA
+      ================================================ */}
+
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        {/* =============================================
+            NAVBAR
+        ============================================== */}
+
+        <Navbar
+          onOpenMobileMenu={() =>
+            setMobileOpen(
+              true,
+            )
           }
         />
 
-        {/* Main Application Area */}
-        <div className="flex-1 min-w-0">
+        {/* =============================================
+            PAGE CONTENT
+        ============================================== */}
 
-          {/* Navbar */}
-          <Navbar />
-
-          <nav className="flex gap-2 overflow-x-auto border-b border-slate-200 bg-white px-4 py-2 lg:hidden">
-            {(user.role === 'Backoffice'
-              ? [['Home', '/backoffice/dashboard'], ['Users', '/backoffice/users'], ['Stations', '/backoffice/stations'], ['Slots', '/backoffice/slots']]
-              : [['Home', '/operator/dashboard'], ['Assets', '/operator/assets'], ['Reservations', '/operator/reservations'], ['Transactions', '/operator/transactions']]
-            ).map(([label, to]) => <NavLink key={to} to={to} className={({ isActive }) => `whitespace-nowrap rounded-lg px-3 py-2 text-sm ${isActive ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'}`}>{label}</NavLink>)}
-          </nav>
-
-          {/* Page Content */}
-          <main className="min-h-[calc(100vh-4rem)] px-4 py-6 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-[1500px]"><Outlet /></div>
-          </main>
-
-        </div>
+        <main className="min-h-0 flex-1 overflow-y-auto">
+          <div className="mx-auto w-full px-5 py-7 sm:px-7 lg:px-8">
+            <Outlet />
+          </div>
+        </main>
       </div>
     </div>
   )
