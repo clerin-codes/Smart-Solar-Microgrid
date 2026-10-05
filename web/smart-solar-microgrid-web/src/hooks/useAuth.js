@@ -2,6 +2,9 @@ import { useContext } from "react";
 
 import AuthContext from "../context/AuthContext";
 
+/**
+ * Provides access to the current authentication session.
+ */
 export default function useAuth() {
   const context = useContext(AuthContext);
 

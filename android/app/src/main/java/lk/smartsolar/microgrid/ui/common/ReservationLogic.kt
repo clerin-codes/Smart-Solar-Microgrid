@@ -27,8 +27,8 @@ fun filterReservations(
         ViewFilter.Active -> !inHistory
         ViewFilter.History -> inHistory
     }
-    viewOk && (query.isBlank() || "${r.number} ${r.prosumerNic} ${stationName(r.stationId)}".contains(query.trim(), ignoreCase = true))
-}
+    viewOk && (query.isBlank() || "${r.number} ${r.prosumerNic} ${stationName(r.stationId)} ${r.date} ${r.startTime}".contains(query.trim(), ignoreCase = true))
+}.sortedByDescending { it.createdAt }
 
 /** Prosumer history: completed transfers only, optionally limited to the last [days] days and one station. */
 fun completedTransfers(

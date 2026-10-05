@@ -1,6 +1,6 @@
 /*
  * Smart Solar Microgrid Trading System
- * Member 1 - Authentication and Accounts
+ * Author: Sahanya - IT23214002
  * File: JwtSettings.cs
  * Purpose: Defines strongly typed JWT token configuration used by generation and validation.
  */

@@ -8,6 +8,10 @@ import useAuth from '../../hooks/useAuth'
    Helpers
 ===================================================== */
 
+/**
+ * Creates a short two-letter avatar value from the
+ * authenticated user's full name.
+ */
 function getInitials(
   fullName = '',
 ) {
@@ -38,6 +42,10 @@ function getInitials(
   }`.toUpperCase()
 }
 
+/**
+ * Converts backend role values into readable labels
+ * for display in the web portal.
+ */
 function getRoleLabel(role) {
   if (
     role === 'GridOperator'
@@ -97,8 +105,8 @@ function LogoutIcon() {
 ===================================================== */
 
 /**
- * Displays the application brand, authenticated user identity
- * and the explicit logout action for the protected web portal.
+ * Displays the application brand, authenticated user
+ * identity, mobile navigation trigger and logout action.
  */
 function Navbar({
   onOpenMobileMenu,
@@ -121,7 +129,8 @@ function Navbar({
     'User'
 
   const role =
-    user?.role ?? ''
+    user?.role ??
+    ''
 
   const initials =
     getInitials(
@@ -132,11 +141,14 @@ function Navbar({
      Logout
   ==================================================== */
 
+  /**
+   * Clears the authenticated client session and returns
+   * the user to the public login page.
+   */
   async function handleLogout() {
     /*
-     * Clear the client authentication session first.
-     * Explicit navigation then guarantees that logout
-     * always finishes on the public login page.
+     * Prefer the logout function exposed by the current
+     * authentication provider.
      */
 
     if (
@@ -156,8 +168,8 @@ function Navbar({
     }
 
     /*
-     * Compatibility fallback for an alternative auth
-     * provider that exposes signOut instead of logout.
+     * Support an alternative auth provider implementation
+     * that exposes signOut rather than logout.
      */
 
     if (
@@ -177,9 +189,8 @@ function Navbar({
     }
 
     /*
-     * Final defensive fallback. Normally the AuthProvider
-     * handles session cleanup, but this prevents a stale
-     * local session if the provider method is unavailable.
+     * Defensive fallback prevents stale authentication
+     * information remaining in local storage.
      */
 
     localStorage.removeItem(
@@ -206,7 +217,7 @@ function Navbar({
         ================================================== */}
 
         <div className="flex min-w-0 items-center gap-3">
-          {/* Mobile menu */}
+          {/* Mobile navigation button */}
 
           <button
             type="button"
@@ -219,7 +230,7 @@ function Navbar({
             <MenuIcon />
           </button>
 
-          {/* Brand */}
+          {/* Application branding */}
 
           <div className="flex min-w-0 items-center">
             <div className="shrink-0 select-none text-[27px] font-extrabold tracking-[-0.06em]">
@@ -236,7 +247,7 @@ function Navbar({
 
             <div className="mx-4 hidden h-8 w-px bg-slate-200 sm:block" />
 
-            {/* Product name */}
+            {/* Product information */}
 
             <div className="hidden min-w-0 sm:block">
               <p className="truncate text-[15px] font-semibold text-slate-900">
@@ -256,17 +267,17 @@ function Navbar({
 
         <div className="flex shrink-0 items-center gap-2.5">
           {/* =================================================
-              USER INFORMATION
+              AUTHENTICATED USER INFORMATION
           ================================================== */}
 
           <div className="flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white px-2.5 py-2 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
-            {/* Initials */}
+            {/* User initials */}
 
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-900 text-[13px] font-bold uppercase tracking-[0.04em] text-white">
               {initials}
             </div>
 
-            {/* Name / role */}
+            {/* User name and role */}
 
             <div className="hidden min-w-0 pr-2 text-left sm:block">
               <p className="max-w-[205px] truncate text-[14px] font-semibold leading-5 text-slate-900">

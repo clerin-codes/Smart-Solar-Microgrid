@@ -26,11 +26,13 @@ dotnet build
 dotnet run
 ```
 
-The API should start at:
+The API development profile starts at:
 
 ```text
 http://localhost:5130
 ```
+
+The IIS deployment used for the assignment is available on port `9339`; see `server/IIS_DEPLOYMENT.md`.
 
 Keep the backend terminal running while testing the web and mobile applications.
 
@@ -116,7 +118,7 @@ npm run dev
 Vite will normally provide a local address similar to:
 
 ```text
-mongodb+srv://mongo_db_user:<password>@godatabase.mym8s5g.mongodb.net/
+http://localhost:5173
 ```
 
 #### Verify Web Application
@@ -391,7 +393,7 @@ The Android application is developed using:
 
 - Kotlin
 - Android Studio
-- XML Views
+- Jetpack Compose
 - SQLite
 - Google Maps
 

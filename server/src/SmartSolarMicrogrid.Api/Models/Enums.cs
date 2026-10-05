@@ -1,6 +1,9 @@
 /*
  * Smart Solar Microgrid Trading System
- * Member 1 - Authentication and Accounts
+ * Author: Shakanyah - IT23214002
+ * Author: Sithmi - IT23241114
+ * Author: Clerin - IT23402584
+ * Author: Thuverakan - IT23281332
  * File: Enums.cs
  * Purpose: Defines system roles and account lifecycle states.
  */

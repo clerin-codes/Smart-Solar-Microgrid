@@ -1,8 +1,14 @@
 /*
  * Smart Solar Microgrid Trading System
- * Member 1 - Authentication and Accounts
+ *
+ * Author: Sahanya - IT23214002
  * File: UserService.cs
- * Purpose: Implements registration, profile management, password security and account lifecycle rules.
+ *
+ * Purpose:
+ * Implements the business logic for authentication-related user management,
+ * Prosumer registration, profile updates, password security, and account
+ * lifecycle operations. Business rules are enforced in the API so that
+ * client applications remain presentation layers only.
  */
 
 using SmartSolarMicrogrid.Api.DTOs.Auth;
@@ -16,30 +22,32 @@ namespace SmartSolarMicrogrid.Api.Services;
 
 public class UserService : IUserService
 {
-    private const int BcryptWorkFactor =
-        12;
+    /*
+     * Use one explicit BCrypt work factor for account creation,
+     * Prosumer registration, and password changes.
+     */
+    private const int BcryptWorkFactor = 12;
 
     private readonly IUserRepository _userRepository;
 
     public UserService(
         IUserRepository userRepository)
     {
-        // Store the repository used by all account-management business operations.
-        _userRepository =
-            userRepository;
+        // Store the repository dependency used by account-management operations.
+        _userRepository = userRepository;
     }
 
     public async Task<List<UserResponseDto>> GetAllAsync(
         UserRole? role = null,
         AccountStatus? status = null)
     {
-        // Apply optional role/status filters in MongoDB and expose only safe response fields.
+        // Retrieve users using optional role and account-status filters.
         var users =
-            await _userRepository
-                .GetFilteredAsync(
-                    role,
-                    status);
+            await _userRepository.GetFilteredAsync(
+                role,
+                status);
 
+        // Return safe response DTOs rather than exposing database entities.
         return users
             .Select(MapToResponse)
             .ToList();
@@ -48,12 +56,12 @@ public class UserService : IUserService
     public async Task<List<UserResponseDto>>
         GetPendingActivationsAsync()
     {
-        // Return only pending Prosumer registrations expected by the Backoffice activation screen.
+        // Retrieve registrations that are waiting for Backoffice activation.
         var users =
-            await _userRepository
-                .GetByStatusAsync(
-                    AccountStatus.PendingActivation);
+            await _userRepository.GetByStatusAsync(
+                AccountStatus.PendingActivation);
 
+        // Only mobile Prosumer registrations belong in the pending-activation queue.
         return users
             .Where(
                 user =>
@@ -66,12 +74,12 @@ public class UserService : IUserService
     public async Task<List<UserResponseDto>>
         GetDeactivationRequestsAsync()
     {
-        // Return only Prosumer requests waiting for Backoffice deactivation finalization.
+        // Retrieve accounts currently waiting for Backoffice deactivation finalization.
         var users =
-            await _userRepository
-                .GetByStatusAsync(
-                    AccountStatus.DeactivationRequested);
+            await _userRepository.GetByStatusAsync(
+                AccountStatus.DeactivationRequested);
 
+        // Only Prosumer self-deactivation requests are shown in this workflow.
         return users
             .Where(
                 user =>
@@ -84,10 +92,13 @@ public class UserService : IUserService
     public async Task<UserResponseDto> GetByNICAsync(
         string nic)
     {
-        // Load the requested account after applying one consistent NIC normalization rule.
+        // Normalize the immutable NIC before retrieving the requested account.
+        var normalizedNic =
+            NormalizeNic(nic);
+
         var user =
             await GetRequiredUserAsync(
-                NormalizeNic(nic));
+                normalizedNic);
 
         return MapToResponse(user);
     }
@@ -95,7 +106,7 @@ public class UserService : IUserService
     public async Task<UserResponseDto> CreateAsync(
         CreateUserDto request)
     {
-        // Restrict Backoffice-created web accounts to Backoffice and Grid Operator roles.
+        // Restrict Backoffice-created web accounts to valid web-user roles.
         if (!request.Role.HasValue)
         {
             throw new ArgumentException(
@@ -105,6 +116,7 @@ public class UserService : IUserService
         var role =
             request.Role.Value;
 
+        // Prosumer accounts must use the dedicated mobile registration workflow.
         if (role ==
             UserRole.Prosumer)
         {
@@ -112,6 +124,7 @@ public class UserService : IUserService
                 "Prosumer accounts must be created through the Prosumer registration workflow.");
         }
 
+        // Normalize identity and contact values before uniqueness checks and persistence.
         var nic =
             NormalizeNic(
                 request.NIC);
@@ -124,7 +137,9 @@ public class UserService : IUserService
             NormalizePhoneNumber(
                 request.PhoneNumber);
 
-        await EnsureNicAvailableAsync(nic);
+        // NIC and e-mail must remain unique across all accounts.
+        await EnsureNicAvailableAsync(
+            nic);
 
         await EnsureEmailAvailableAsync(
             email);
@@ -132,6 +147,7 @@ public class UserService : IUserService
         var now =
             DateTime.UtcNow;
 
+        // Web accounts created by Backoffice become active immediately.
         var user =
             new UserDetails
             {
@@ -173,8 +189,8 @@ public class UserService : IUserService
                     now
             };
 
-        await _userRepository
-            .CreateAsync(user);
+        await _userRepository.CreateAsync(
+            user);
 
         return MapToResponse(user);
     }
@@ -183,7 +199,7 @@ public class UserService : IUserService
         RegisterProsumerAsync(
             RegisterProsumerDto request)
     {
-        // Create every public mobile registration as an inactive pending Prosumer.
+        // Normalize registration values before performing duplicate checks.
         var nic =
             NormalizeNic(
                 request.NIC);
@@ -196,6 +212,7 @@ public class UserService : IUserService
             NormalizePhoneNumber(
                 request.PhoneNumber);
 
+        // Prevent duplicate NIC and e-mail registrations.
         await EnsureNicAvailableAsync(
             nic);
 
@@ -205,6 +222,11 @@ public class UserService : IUserService
         var now =
             DateTime.UtcNow;
 
+        /*
+         * Public/mobile registrations are always created as pending Prosumers.
+         * A Backoffice officer must activate the account before normal access
+         * is permitted.
+         */
         var user =
             new UserDetails
             {
@@ -246,8 +268,8 @@ public class UserService : IUserService
                     now
             };
 
-        await _userRepository
-            .CreateAsync(user);
+        await _userRepository.CreateAsync(
+            user);
 
         return MapToResponse(user);
     }
@@ -256,15 +278,22 @@ public class UserService : IUserService
         string nic,
         UpdateUserDto request)
     {
-        // Change only editable profile fields; NIC, role and lifecycle state remain immutable here.
+        /*
+         * Update only editable profile information.
+         * NIC, role, password and lifecycle status are not modified here.
+         */
+        var normalizedNic =
+            NormalizeNic(nic);
+
         var user =
             await GetRequiredUserAsync(
-                NormalizeNic(nic));
+                normalizedNic);
 
         var email =
             NormalizeEmail(
                 request.Email);
 
+        // Allow the user's existing e-mail while blocking another user's e-mail.
         await EnsureEmailAvailableAsync(
             email,
             user.NIC);
@@ -283,8 +312,8 @@ public class UserService : IUserService
         user.UpdatedAt =
             DateTime.UtcNow;
 
-        await _userRepository
-            .UpdateAsync(user);
+        await _userRepository.UpdateAsync(
+            user);
 
         return MapToResponse(user);
     }
@@ -293,11 +322,15 @@ public class UserService : IUserService
         RequestOwnDeactivationAsync(
             string nic)
     {
-        // Allow only an active Prosumer to create one deactivation request for their own account.
+        // Load the authenticated account using its normalized immutable NIC.
+        var normalizedNic =
+            NormalizeNic(nic);
+
         var user =
             await GetRequiredUserAsync(
-                NormalizeNic(nic));
+                normalizedNic);
 
+        // Self-deactivation requests belong only to Solar Prosumers.
         if (user.Role !=
             UserRole.Prosumer)
         {
@@ -305,6 +338,7 @@ public class UserService : IUserService
                 "Only Solar Prosumers can request self-deactivation.");
         }
 
+        // Prevent duplicate or invalid deactivation requests.
         if (!user.IsActive ||
             user.Status !=
             AccountStatus.Active)
@@ -316,6 +350,10 @@ public class UserService : IUserService
         var now =
             DateTime.UtcNow;
 
+        /*
+         * Move the account into the request state.
+         * Backoffice must later finalize the deactivation.
+         */
         user.IsActive =
             false;
 
@@ -328,8 +366,8 @@ public class UserService : IUserService
         user.UpdatedAt =
             now;
 
-        await _userRepository
-            .UpdateAsync(user);
+        await _userRepository.UpdateAsync(
+            user);
 
         return MapToResponse(user);
     }
@@ -337,13 +375,19 @@ public class UserService : IUserService
     public async Task<UserResponseDto> ActivateAsync(
         string nic)
     {
-        // Approve only an inactive pending Prosumer registration.
+        // Load the pending registration using its normalized NIC.
+        var normalizedNic =
+            NormalizeNic(nic);
+
         var user =
             await GetRequiredUserAsync(
-                NormalizeNic(nic));
+                normalizedNic);
 
-        if (user.Role != UserRole.Prosumer ||
-            user.Status != AccountStatus.PendingActivation ||
+        // Activation is reserved for inactive pending Prosumer registrations.
+        if (user.Role !=
+                UserRole.Prosumer ||
+            user.Status !=
+                AccountStatus.PendingActivation ||
             user.IsActive)
         {
             throw new InvalidOperationException(
@@ -362,8 +406,8 @@ public class UserService : IUserService
         user.UpdatedAt =
             DateTime.UtcNow;
 
-        await _userRepository
-            .UpdateAsync(user);
+        await _userRepository.UpdateAsync(
+            user);
 
         return MapToResponse(user);
     }
@@ -371,11 +415,18 @@ public class UserService : IUserService
     public async Task<UserResponseDto> DeactivateAsync(
         string nic)
     {
-        // Soft-deactivate an active managed account or finalize a Prosumer deactivation request.
+        /*
+         * Soft-deactivate a managed account or finalize an existing
+         * Prosumer deactivation request.
+         */
+        var normalizedNic =
+            NormalizeNic(nic);
+
         var user =
             await GetRequiredUserAsync(
-                NormalizeNic(nic));
+                normalizedNic);
 
+        // Avoid repeating an already completed lifecycle operation.
         if (user.Status ==
             AccountStatus.Deactivated)
         {
@@ -383,6 +434,10 @@ public class UserService : IUserService
                 "The account is already deactivated.");
         }
 
+        /*
+         * Pending Prosumer registrations must use the activation workflow
+         * before they can enter the normal deactivation lifecycle.
+         */
         if (user.Status ==
             AccountStatus.PendingActivation)
         {
@@ -399,8 +454,8 @@ public class UserService : IUserService
         user.UpdatedAt =
             DateTime.UtcNow;
 
-        await _userRepository
-            .UpdateAsync(user);
+        await _userRepository.UpdateAsync(
+            user);
 
         return MapToResponse(user);
     }
@@ -408,11 +463,18 @@ public class UserService : IUserService
     public async Task<UserResponseDto> ReactivateAsync(
         string nic)
     {
-        // Restore only a finalized deactivated account; pending registrations use ActivateAsync.
+        // Retrieve the account that Backoffice intends to restore.
+        var normalizedNic =
+            NormalizeNic(nic);
+
         var user =
             await GetRequiredUserAsync(
-                NormalizeNic(nic));
+                normalizedNic);
 
+        /*
+         * Reactivation applies only after deactivation has been finalized.
+         * Pending registrations must use ActivateAsync instead.
+         */
         if (user.IsActive ||
             user.Status !=
             AccountStatus.Deactivated)
@@ -433,8 +495,8 @@ public class UserService : IUserService
         user.UpdatedAt =
             DateTime.UtcNow;
 
-        await _userRepository
-            .UpdateAsync(user);
+        await _userRepository.UpdateAsync(
+            user);
 
         return MapToResponse(user);
     }
@@ -444,11 +506,14 @@ public class UserService : IUserService
         ChangePasswordDto request)
     {
         // Load the authenticated account using its immutable NIC identity.
+        var normalizedNic =
+            NormalizeNic(nic);
+
         var user =
             await GetRequiredUserAsync(
-                NormalizeNic(nic));
+                normalizedNic);
 
-        // Require knowledge of the current password before accepting a replacement.
+        // Verify knowledge of the existing password before allowing replacement.
         if (!BCrypt.Net.BCrypt.Verify(
                 request.CurrentPassword,
                 user.PasswordHash))
@@ -457,7 +522,7 @@ public class UserService : IUserService
                 "Current password is incorrect.");
         }
 
-        // Prevent a no-op password change even when the new value passes complexity validation.
+        // Prevent replacing the password with the same current password.
         if (BCrypt.Net.BCrypt.Verify(
                 request.NewPassword,
                 user.PasswordHash))
@@ -466,7 +531,10 @@ public class UserService : IUserService
                 "New password must be different from the current password.");
         }
 
-        // Re-hash using the same explicit work factor used for account creation and registration.
+        /*
+         * Hash the replacement password using the same explicit work factor
+         * used for account creation and Prosumer registration.
+         */
         user.PasswordHash =
             BCrypt.Net.BCrypt.HashPassword(
                 request.NewPassword,
@@ -476,18 +544,21 @@ public class UserService : IUserService
         user.UpdatedAt =
             DateTime.UtcNow;
 
-        await _userRepository
-            .UpdateAsync(user);
+        await _userRepository.UpdateAsync(
+            user);
     }
+
+    /* =====================================================
+       Private Helpers
+    ===================================================== */
 
     private async Task<UserDetails> GetRequiredUserAsync(
         string normalizedNic)
     {
-        // Centralize not-found handling so every account operation behaves consistently.
+        // Centralize account lookup and not-found handling for service operations.
         var user =
-            await _userRepository
-                .GetByNICAsync(
-                    normalizedNic);
+            await _userRepository.GetByNICAsync(
+                normalizedNic);
 
         if (user == null)
         {
@@ -501,10 +572,12 @@ public class UserService : IUserService
     private async Task EnsureNicAvailableAsync(
         string nic)
     {
-        // Report duplicate immutable NIC values as an HTTP 409 conflict.
-        if (await _userRepository
-                .GetByNICAsync(nic) !=
-            null)
+        // NIC is the immutable MongoDB identifier and therefore must remain unique.
+        var existing =
+            await _userRepository.GetByNICAsync(
+                nic);
+
+        if (existing != null)
         {
             throw new ConflictException(
                 "An account with this NIC already exists.");
@@ -515,11 +588,16 @@ public class UserService : IUserService
         string email,
         string? excludeNic = null)
     {
-        // Report duplicate normalized e-mail values as an HTTP 409 conflict.
-        if (await _userRepository
-                .EmailExistsAsync(
-                    email,
-                    excludeNic))
+        /*
+         * Check the normalized e-mail against all other accounts.
+         * excludeNic allows an existing user to retain their own e-mail.
+         */
+        var exists =
+            await _userRepository.EmailExistsAsync(
+                email,
+                excludeNic);
+
+        if (exists)
         {
             throw new ConflictException(
                 "An account with this e-mail already exists.");
@@ -529,7 +607,7 @@ public class UserService : IUserService
     private static string NormalizeNic(
         string nic)
     {
-        // Normalize legacy NIC suffix casing while preserving the submitted identity value.
+        // Normalize whitespace and legacy V/X suffix casing before comparison.
         return nic
             .Trim()
             .ToUpperInvariant();
@@ -538,7 +616,7 @@ public class UserService : IUserService
     private static string NormalizeFullName(
         string fullName)
     {
-        // Collapse repeated spaces so persisted names have a consistent representation.
+        // Remove leading/trailing whitespace and collapse repeated spaces.
         return string.Join(
             ' ',
             fullName
@@ -551,7 +629,7 @@ public class UserService : IUserService
     private static string NormalizeEmail(
         string email)
     {
-        // Store e-mail addresses in lowercase to support deterministic uniqueness checks.
+        // Store e-mail addresses in lowercase for deterministic uniqueness checks.
         return email
             .Trim()
             .ToLowerInvariant();
@@ -560,7 +638,7 @@ public class UserService : IUserService
     private static string NormalizePhoneNumber(
         string phoneNumber)
     {
-        // Store both accepted Sri Lankan formats consistently as 07XXXXXXXX.
+        // Normalize accepted Sri Lankan +94 mobile numbers to the 07XXXXXXXX format.
         var normalized =
             phoneNumber.Trim();
 
@@ -579,7 +657,10 @@ public class UserService : IUserService
     private static UserResponseDto MapToResponse(
         UserDetails user)
     {
-        // Return only safe account properties; PasswordHash never leaves the API boundary.
+        /*
+         * Map the database entity to the public account response.
+         * PasswordHash is deliberately never exposed outside the API.
+         */
         return new UserResponseDto
         {
             NIC =

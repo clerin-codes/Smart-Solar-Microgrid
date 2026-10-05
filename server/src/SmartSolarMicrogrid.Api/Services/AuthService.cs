@@ -1,8 +1,19 @@
 /*
  * Smart Solar Microgrid Trading System
  * Member 1 - Authentication and Accounts
+ * Author: Sahanya - IT23214002
+ *
  * File: AuthService.cs
- * Purpose: Validates account credentials and generates role-based JWT access tokens.
+ *
+ * Purpose:
+ * Validates login credentials and generates signed JWT access tokens
+ * containing the authenticated user's identity and authorization role.
+ *
+ * Security:
+ * - Passwords are verified using BCrypt.
+ * - Login errors do not reveal whether a NIC exists.
+ * - Only Active accounts can receive access tokens.
+ * - JWTs contain the immutable NIC and application role.
  */
 
 using System.IdentityModel.Tokens.Jwt;
@@ -28,7 +39,8 @@ public class AuthService : IAuthService
         IUserRepository userRepository,
         JwtSettings jwtSettings)
     {
-        // Store dependencies used for credential verification and token creation.
+        // Store authentication dependencies required for
+        // account lookup, password verification and JWT generation.
         _userRepository =
             userRepository;
 
@@ -39,9 +51,10 @@ public class AuthService : IAuthService
     public async Task<LoginResponseDto> LoginAsync(
         LoginRequestDto request)
     {
-        // Normalize the NIC before querying the immutable MongoDB account identifier.
+        // Normalize the immutable NIC identifier before
+        // querying the MongoDB user collection.
         var nic =
-            request.NIC
+            (request.NIC ?? string.Empty)
                 .Trim()
                 .ToUpperInvariant();
 
@@ -49,7 +62,9 @@ public class AuthService : IAuthService
             await _userRepository
                 .GetByNICAsync(nic);
 
-        // Return one generic credential error so an attacker cannot enumerate registered NICs.
+        // Use one generic credential error for both an
+        // unknown NIC and an invalid password to prevent
+        // account-enumeration attacks.
         if (user == null ||
             !BCrypt.Net.BCrypt.Verify(
                 request.Password,
@@ -59,10 +74,11 @@ public class AuthService : IAuthService
                 "Invalid NIC or password.");
         }
 
-        // Only fully active accounts are allowed to receive new access tokens.
+        // Only fully active accounts may authenticate.
+        // Pending, deactivation-requested and deactivated
+        // accounts must complete their lifecycle action first.
         if (!user.IsActive ||
-            user.Status !=
-            AccountStatus.Active)
+            user.Status != AccountStatus.Active)
         {
             var message =
                 user.Status switch
@@ -84,7 +100,8 @@ public class AuthService : IAuthService
                 message);
         }
 
-        // Create a short-lived signed JWT carrying the immutable NIC and authorization role.
+        // Calculate one expiry timestamp and use the same
+        // value in both the JWT and the login response.
         var expiresAtUtc =
             DateTime.UtcNow.AddMinutes(
                 _jwtSettings.ExpiryMinutes);
@@ -94,6 +111,8 @@ public class AuthService : IAuthService
                 user,
                 expiresAtUtc);
 
+        // Return only the authentication information needed
+        // by the Web and Android clients.
         return new LoginResponseDto
         {
             Token =
@@ -123,7 +142,8 @@ public class AuthService : IAuthService
         UserDetails user,
         DateTime expiresAtUtc)
     {
-        // Build identity and role claims consumed by ASP.NET Core authorization.
+        // Build the claims used by ASP.NET Core authentication
+        // and role-based authorization.
         var claims =
             new List<Claim>
             {
@@ -148,6 +168,8 @@ public class AuthService : IAuthService
                     Guid.NewGuid().ToString())
             };
 
+        // Create the symmetric signing key from the
+        // validated JWT configuration.
         var signingKey =
             new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(
@@ -162,7 +184,8 @@ public class AuthService : IAuthService
                 signingKey,
                 SecurityAlgorithms.HmacSha256);
 
-        // Generate a signed access token using configured issuer, audience and expiry.
+        // Create a signed JWT with the configured issuer,
+        // audience and expiry time.
         var token =
             new JwtSecurityToken(
                 issuer:
@@ -183,6 +206,8 @@ public class AuthService : IAuthService
                 signingCredentials:
                     credentials);
 
+        // Serialize the JWT into the Bearer-token string
+        // returned to the authenticated client.
         return new JwtSecurityTokenHandler()
             .WriteToken(token);
     }

@@ -11,9 +11,12 @@ const apiClient = axios.create({
   },
 });
 
+/*
+ * Attach the stored JWT access token to protected API requests.
+ * Public requests such as login are sent normally when no token exists.
+ */
 apiClient.interceptors.request.use(
   (config) => {
-    // Attach the current JWT to every protected REST request.
     const token = localStorage.getItem("accessToken");
 
     if (token) {
@@ -26,15 +29,21 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
+/*
+ * Handle expired or invalid authenticated sessions centrally.
+ *
+ * A normal failed login can also return HTTP 401, so authentication
+ * data is cleared only when an access token already exists.
+ */
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    // A 401 with an existing session means the token is no longer usable.
     const hasStoredToken = Boolean(localStorage.getItem("accessToken"));
 
     if (error?.response?.status === 401 && hasStoredToken) {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("authUser");
+
       window.dispatchEvent(new Event("auth:unauthorized"));
     }
 

@@ -40,7 +40,9 @@ function MainLayout() {
           mobileOpen
         }
         onCloseMobile={() =>
-          setMobileOpen(false)
+          setMobileOpen(
+            false,
+          )
         }
       />
 
@@ -49,9 +51,15 @@ function MainLayout() {
       ================================================ */}
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        {/* =============================================
+            NAVBAR
+        ============================================== */}
+
         <Navbar
           onOpenMobileMenu={() =>
-            setMobileOpen(true)
+            setMobileOpen(
+              true,
+            )
           }
         />
 

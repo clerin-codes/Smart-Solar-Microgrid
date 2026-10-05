@@ -1,3 +1,10 @@
+/*
+ * File: StationSchedule.cs
+ * Project: Smart Solar Microgrid
+ * Description: Models a solar station operating schedule.
+ * Author: Sithmi - IT23241114
+ */
+
 namespace SmartSolarMicrogrid.Api.Models;
 
 public class StationSchedule

@@ -1,6 +1,6 @@
 /*
  * Smart Solar Microgrid Trading System
- * Member 1 - Authentication and Accounts
+ * Author: Shakanyah - IT23214002
  * File: RegisterProsumerDto.cs
  * Purpose: Validates Solar Prosumer self-registration requests.
  */

@@ -1,6 +1,9 @@
 /*
  * Smart Solar Microgrid Trading System
- * Member 1 - Authentication and Accounts
+ * Author: Shakanyah - IT23214002
+ * Author: Sithmi - IT23241114
+ * Author: Clerin - IT23402584
+ * Author: Thuverakan - IT23281332
  * File: Program.cs
  * Purpose: Configures MongoDB, JWT authentication, authorization,
  *          dependency injection, Swagger, validation, CORS, seed data,
@@ -9,6 +12,7 @@
 
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using MongoDB.Bson;
@@ -355,16 +359,9 @@ builder.Services.Configure<ApiBehaviorOptions>(
                                     return "request";
                                 }
 
-                                if (entry.Key.Length == 1)
-                                {
-                                    return entry.Key
-                                        .ToLowerInvariant();
-                                }
-
-                                return
-                                    char.ToLowerInvariant(
-                                        entry.Key[0]) +
-                                    entry.Key[1..];
+                                return JsonNamingPolicy
+                                    .CamelCase
+                                    .ConvertName(entry.Key);
                             },
 
                             entry =>
@@ -484,6 +481,51 @@ var app =
     builder.Build();
 
 // ======================================================
+// Development Database Reset Command
+// ======================================================
+
+if (args.Contains(
+        "--reset-demo-data",
+        StringComparer.OrdinalIgnoreCase))
+{
+    // Responsible: Shakanyah - IT23214002; Sithmi - IT23241114; Clerin - IT23402584; Thuverakan - IT23281332
+    // Drop only the explicitly named assignment database, then recreate the three documented demo accounts.
+    var database =
+        app.Services.GetRequiredService<IMongoDatabase>();
+
+    var databaseName =
+        database.DatabaseNamespace.DatabaseName;
+
+    if (!string.Equals(
+            databaseName,
+            "SmartSolarMicrogrid",
+            StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException(
+            $"Database reset refused for unexpected database '{databaseName}'.");
+    }
+
+    await database.Client
+        .DropDatabaseAsync(databaseName);
+
+    using var resetScope =
+        app.Services.CreateScope();
+
+    await resetScope.ServiceProvider
+        .GetRequiredService<IUserRepository>()
+        .EnsureIndexesAsync();
+
+    await resetScope.ServiceProvider
+        .GetRequiredService<SeedDataService>()
+        .SeedAsync();
+
+    Console.WriteLine(
+        "Database reset complete. Only the three demo accounts were recreated.");
+
+    return;
+}
+
+// ======================================================
 // 12. MongoDB Startup Connection Test
 // ======================================================
 
@@ -542,7 +584,15 @@ using (var scope =
             .GetRequiredService<
                 IUserRepository>();
 
+    var reservationRepository =
+        scope.ServiceProvider
+            .GetRequiredService<
+                IReservationRepository>();
+
     await userRepository
+        .EnsureIndexesAsync();
+
+    await reservationRepository
         .EnsureIndexesAsync();
 }
 
@@ -550,17 +600,25 @@ using (var scope =
 // 14. Seed Database
 // ======================================================
 
-using (var scope =
-       app.Services.CreateScope())
-{
-    // Resolve and execute development seed data.
-    var seedDataService =
-        scope.ServiceProvider
-            .GetRequiredService<
-                SeedDataService>();
+var seedDataEnabled =
+    app.Environment.IsDevelopment() ||
+    app.Configuration.GetValue<bool>(
+        "SeedData:Enabled");
 
-    await seedDataService
-        .SeedAsync();
+if (seedDataEnabled)
+{
+    using (var scope =
+           app.Services.CreateScope())
+    {
+        // Resolve and execute development seed data.
+        var seedDataService =
+            scope.ServiceProvider
+                .GetRequiredService<
+                    SeedDataService>();
+
+        await seedDataService
+            .SeedAsync();
+    }
 }
 
 // ======================================================

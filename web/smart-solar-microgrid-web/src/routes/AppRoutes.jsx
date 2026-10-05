@@ -1,5 +1,4 @@
 import {
-  BrowserRouter,
   Navigate,
   Route,
   Routes,
@@ -26,6 +25,15 @@ import Slots from '../pages/backoffice/Slots'
 import OperatorDashboard from '../pages/operator/OperatorDashboard'
 import Reservations from '../pages/operator/Reservations'
 import ReservationDetails from '../pages/operator/ReservationDetails'
+import Transactions from '../pages/operator/Transactions'
+import Assets from '../pages/operator/Assets'
+
+/* =====================================================
+   Role Home Redirect
+
+   Redirects authenticated web users to the dashboard
+   that belongs to their assigned system role.
+===================================================== */
 
 function RoleHomeRedirect() {
   const {
@@ -64,10 +72,41 @@ function RoleHomeRedirect() {
   )
 }
 
+/* =====================================================
+   Application Routes
+
+   Public:
+   - Login
+   - Access denied
+
+   Shared authenticated:
+   - Dashboard redirect
+   - Profile
+
+   Backoffice:
+   - Dashboard
+   - User management
+   - Pending activations
+   - Deactivation requests
+   - Stations
+   - Energy slots
+
+   Grid Operator:
+   - Dashboard
+   - Assets
+   - Reservations
+   - Reservation details
+   - Transactions
+   - Transaction history
+===================================================== */
+
 export default function AppRoutes() {
   return (
-    <BrowserRouter>
       <Routes>
+        {/* =================================================
+            PUBLIC ROUTES
+        ================================================== */}
+
         <Route
           path="/login"
           element={
@@ -81,6 +120,25 @@ export default function AppRoutes() {
             <AccessDenied />
           }
         />
+
+        {/* Root always goes through protected dashboard flow */}
+
+        <Route
+          path="/"
+          element={
+            <Navigate
+              to="/dashboard"
+              replace
+            />
+          }
+        />
+
+        {/* =================================================
+            AUTHENTICATED WEB USERS
+
+            Only Backoffice and Grid Operator users are
+            permitted to access the React web application.
+        ================================================== */}
 
         <Route
           element={
@@ -97,6 +155,10 @@ export default function AppRoutes() {
               <MainLayout />
             }
           >
+            {/* =================================================
+                SHARED ROUTES
+            ================================================== */}
+
             <Route
               index
               element={
@@ -117,6 +179,13 @@ export default function AppRoutes() {
                 <ProfilePage />
               }
             />
+
+            {/* =================================================
+                BACKOFFICE ROUTES
+
+                Backoffice users have access to system
+                administration functions.
+            ================================================== */}
 
             <Route
               element={
@@ -170,6 +239,13 @@ export default function AppRoutes() {
               />
             </Route>
 
+            {/* =================================================
+                GRID OPERATOR ROUTES
+
+                Grid Operators have access only to operational
+                functions and not Backoffice administration.
+            ================================================== */}
+
             <Route
               element={
                 <ProtectedRoute
@@ -187,6 +263,13 @@ export default function AppRoutes() {
               />
 
               <Route
+                path="/operator/assets"
+                element={
+                  <Assets />
+                }
+              />
+
+              <Route
                 path="/operator/reservations"
                 element={
                   <Reservations />
@@ -199,7 +282,30 @@ export default function AppRoutes() {
                   <ReservationDetails />
                 }
               />
+
+              <Route
+                path="/operator/transactions"
+                element={
+                  <Transactions />
+                }
+              />
+
+              <Route
+                path="/operator/history"
+                element={
+                  <Transactions
+                    completedOnly
+                  />
+                }
+              />
             </Route>
+
+            {/* =================================================
+                AUTHENTICATED UNKNOWN ROUTE
+
+                Redirect authenticated users back to the
+                dashboard appropriate for their role.
+            ================================================== */}
 
             <Route
               path="*"
@@ -209,6 +315,10 @@ export default function AppRoutes() {
             />
           </Route>
         </Route>
+
+        {/* =================================================
+            GLOBAL FALLBACK
+        ================================================== */}
 
         <Route
           path="*"
@@ -220,6 +330,5 @@ export default function AppRoutes() {
           }
         />
       </Routes>
-    </BrowserRouter>
   )
 }

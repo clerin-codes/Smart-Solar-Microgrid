@@ -73,4 +73,15 @@ class TimeRulesTest {
         assertEquals(LocalDate.parse("2026-09-19"), window.first())
         assertEquals(LocalDate.parse("2026-09-26"), window.last())
     }
+
+    @Test
+    fun hasStarted_disablesPastAndCurrentSlots() {
+        val before = slot().copy(startTime = "08:00:00")
+        val current = slot().copy(startTime = "09:00:00")
+        val after = slot().copy(startTime = "10:00:00")
+
+        assertTrue(TimeRules.hasStarted(before, startUtc))
+        assertTrue(TimeRules.hasStarted(current, startUtc))
+        assertFalse(TimeRules.hasStarted(after, startUtc))
+    }
 }

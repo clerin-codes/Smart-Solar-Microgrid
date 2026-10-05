@@ -1,3 +1,10 @@
+/*
+ * File: StationService.cs
+ * Project: Smart Solar Microgrid
+ * Description: Implements solar station business operations.
+ * Author: Sithmi - IT23241114
+ */
+
 using SmartSolarMicrogrid.Api.DTOs.Stations;
 using SmartSolarMicrogrid.Api.Interfaces.Repositories;
 using SmartSolarMicrogrid.Api.Interfaces.Services;
@@ -15,24 +22,32 @@ public class StationService : IStationService
         IStationRepository stationRepository,
         IReservationRepository reservationRepository)
     {
+        // Responsible: Sithmi - IT23241114
+        // Store repositories used for station management and reservation checks.
         _stationRepository = stationRepository;
         _reservationRepository = reservationRepository;
     }
 
     public async Task<List<SolarStationInfo>> GetAllAsync()
     {
+        // Responsible: Sithmi - IT23241114
+        // Return every configured solar station.
         return await _stationRepository.GetAllAsync();
     }
 
     public async Task<SolarStationInfo?> GetByIdAsync(
         string id)
     {
+        // Responsible: Sithmi - IT23241114
+        // Return a solar station by its identifier.
         return await _stationRepository.GetByIdAsync(id);
     }
 
     public async Task<SolarStationInfo> CreateAsync(
         CreateStationDto request)
     {
+        // Responsible: Sithmi - IT23241114
+        // Validate uniqueness and create a solar station.
         // Ensure unique station code
         var existing = await _stationRepository.GetByCodeAsync(request.StationCode);
         if (existing != null)
@@ -96,6 +111,8 @@ public class StationService : IStationService
         string id,
         UpdateStationDto request)
     {
+        // Responsible: Sithmi - IT23241114
+        // Validate and update an existing solar station.
         var station =
             await _stationRepository.GetByIdAsync(id);
 
@@ -144,6 +161,8 @@ public class StationService : IStationService
 
     public async Task DeactivateAsync(string id)
     {
+        // Responsible: Sithmi - IT23241114
+        // Deactivate a station only when no active reservation depends on it.
         var station =
             await _stationRepository.GetByIdAsync(id);
 

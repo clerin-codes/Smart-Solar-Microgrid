@@ -1,6 +1,6 @@
 /*
  * Smart Solar Microgrid Trading System
- * Member 1 - Authentication and Accounts
+ * Author: Shakanyah - IT23214002
  * File: UserDetails.cs
  * Purpose: Defines the MongoDB account document used for authentication and lifecycle management.
  */

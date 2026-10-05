@@ -1,8 +1,9 @@
 /*
  * Smart Solar Microgrid Trading System
- * Member 1 - Authentication and Accounts
+ * Author: Sahanya - IT23214002
  * File: UserRepository.cs
- * Purpose: Implements MongoDB persistence, indexes and account queries.
+ * Purpose: Implements MongoDB persistence, indexes and account queries
+ *          for authentication and user account management.
  */
 
 using MongoDB.Driver;
@@ -13,29 +14,46 @@ using SmartSolarMicrogrid.Api.Models;
 
 namespace SmartSolarMicrogrid.Api.Repositories;
 
+/// <summary>
+/// Provides MongoDB persistence operations for user accounts.
+/// NIC is used as the immutable primary identifier for each account.
+/// </summary>
 public class UserRepository : IUserRepository
 {
+    private const string CollectionName = "UserDetails";
+
     private readonly IMongoCollection<UserDetails> _collection;
 
+    /// <summary>
+    /// Initializes the repository using the UserDetails MongoDB collection.
+    /// </summary>
+    /// <param name="database">
+    /// MongoDB database instance supplied through dependency injection.
+    /// </param>
     public UserRepository(
         IMongoDatabase database)
     {
-        // Resolve the UserDetails collection once for repository operations.
+        // Resolve the UserDetails collection once for all repository operations.
         _collection =
             database.GetCollection<UserDetails>(
-                "UserDetails");
+                CollectionName);
     }
 
+    /// <summary>
+    /// Creates the indexes required for account uniqueness
+    /// and efficient lifecycle queries.
+    /// </summary>
     public async Task EnsureIndexesAsync()
     {
-        // Enforce unique normalized emails and accelerate common role/status queries.
+        // Enforce unique e-mail addresses and accelerate common status and role queries.
         var indexes =
             new List<CreateIndexModel<UserDetails>>
             {
                 new(
                     Builders<UserDetails>
                         .IndexKeys
-                        .Ascending(x => x.Email),
+                        .Ascending(
+                            x => x.Email),
                     new CreateIndexOptions
                     {
                         Name =
@@ -48,7 +66,8 @@ public class UserRepository : IUserRepository
                 new(
                     Builders<UserDetails>
                         .IndexKeys
-                        .Ascending(x => x.Status),
+                        .Ascending(
+                            x => x.Status),
                     new CreateIndexOptions
                     {
                         Name =
@@ -58,7 +77,8 @@ public class UserRepository : IUserRepository
                 new(
                     Builders<UserDetails>
                         .IndexKeys
-                        .Ascending(x => x.Role),
+                        .Ascending(
+                            x => x.Role),
                     new CreateIndexOptions
                     {
                         Name =
@@ -68,23 +88,48 @@ public class UserRepository : IUserRepository
 
         await _collection
             .Indexes
-            .CreateManyAsync(indexes);
+            .CreateManyAsync(
+                indexes);
     }
 
+    /// <summary>
+    /// Retrieves a user account using NIC.
+    /// </summary>
+    /// <param name="nic">
+    /// National Identity Card number used as the account primary key.
+    /// </param>
+    /// <returns>
+    /// The matching user or null when the account does not exist.
+    /// </returns>
     public async Task<UserDetails?> GetByNICAsync(
         string nic)
     {
-        // Query the MongoDB primary key used for all account identity operations.
+        // Query the immutable NIC primary key used for account identity operations.
         return await _collection
-            .Find(x => x.NIC == nic)
+            .Find(
+                x =>
+                    x.NIC ==
+                    nic)
             .FirstOrDefaultAsync();
     }
 
+    /// <summary>
+    /// Retrieves users using optional role and account-status filters.
+    /// </summary>
+    /// <param name="role">
+    /// Optional user role filter.
+    /// </param>
+    /// <param name="status">
+    /// Optional account lifecycle status filter.
+    /// </param>
+    /// <returns>
+    /// Matching accounts ordered from newest to oldest.
+    /// </returns>
     public async Task<List<UserDetails>> GetFilteredAsync(
         UserRole? role = null,
         AccountStatus? status = null)
     {
-        // Build database-side filters so unnecessary account documents are not returned.
+        // Build MongoDB-side filters so unnecessary account documents are not returned.
         var filter =
             Builders<UserDetails>
                 .Filter
@@ -117,10 +162,19 @@ public class UserRepository : IUserRepository
             .ToListAsync();
     }
 
+    /// <summary>
+    /// Retrieves accounts belonging to a particular lifecycle status.
+    /// </summary>
+    /// <param name="status">
+    /// Account lifecycle status to query.
+    /// </param>
+    /// <returns>
+    /// Matching accounts ordered by the most recent update.
+    /// </returns>
     public async Task<List<UserDetails>> GetByStatusAsync(
         AccountStatus status)
     {
-        // Return lifecycle queues ordered with the newest account activity first.
+        // Return lifecycle queues with the most recently updated accounts first.
         return await _collection
             .Find(
                 x =>
@@ -131,21 +185,39 @@ public class UserRepository : IUserRepository
             .ToListAsync();
     }
 
+    /// <summary>
+    /// Checks whether an e-mail address is already used by another account.
+    /// </summary>
+    /// <param name="email">
+    /// E-mail address to check.
+    /// </param>
+    /// <param name="excludeNic">
+    /// Optional NIC to exclude while updating an existing account.
+    /// </param>
+    /// <returns>
+    /// True when another account already uses the supplied e-mail address.
+    /// </returns>
     public async Task<bool> EmailExistsAsync(
         string email,
         string? excludeNic = null)
     {
-        // Check normalized email uniqueness while allowing an account to keep its own email.
+        // Normalize the e-mail before checking the unique account value.
+        var normalizedEmail =
+            email
+                .Trim()
+                .ToLowerInvariant();
+
         var filter =
             Builders<UserDetails>
                 .Filter
                 .Eq(
                     x => x.Email,
-                    email);
+                    normalizedEmail);
 
         if (!string.IsNullOrWhiteSpace(
                 excludeNic))
         {
+            // Exclude the account currently being edited from the duplicate check.
             filter &=
                 Builders<UserDetails>
                     .Filter
@@ -159,14 +231,24 @@ public class UserRepository : IUserRepository
             .AnyAsync();
     }
 
+    /// <summary>
+    /// Inserts a new user account into MongoDB.
+    /// </summary>
+    /// <param name="user">
+    /// Account document to create.
+    /// </param>
+    /// <exception cref="ConflictException">
+    /// Thrown when the NIC or e-mail already exists.
+    /// </exception>
     public async Task CreateAsync(
         UserDetails user)
     {
-        // Insert the account and convert duplicate-key races into HTTP 409 conflicts.
+        // Insert the account and translate duplicate-key races into HTTP 409 conflicts.
         try
         {
             await _collection
-                .InsertOneAsync(user);
+                .InsertOneAsync(
+                    user);
         }
         catch (MongoWriteException ex)
             when (
@@ -179,10 +261,22 @@ public class UserRepository : IUserRepository
         }
     }
 
+    /// <summary>
+    /// Replaces an existing account identified by its immutable NIC.
+    /// </summary>
+    /// <param name="user">
+    /// Updated account document.
+    /// </param>
+    /// <exception cref="KeyNotFoundException">
+    /// Thrown when the account does not exist.
+    /// </exception>
+    /// <exception cref="ConflictException">
+    /// Thrown when another account already uses the e-mail address.
+    /// </exception>
     public async Task UpdateAsync(
         UserDetails user)
     {
-        // Replace the account identified by immutable NIC and preserve duplicate-email handling.
+        // Replace the account using NIC while preserving database-level uniqueness checks.
         try
         {
             var result =
@@ -194,7 +288,9 @@ public class UserRepository : IUserRepository
 
                         user);
 
-            if (result.MatchedCount == 0)
+            if (
+                result.MatchedCount ==
+                0)
             {
                 throw new KeyNotFoundException(
                     "User not found.");

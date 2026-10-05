@@ -1,3 +1,11 @@
+/*
+ * File: ReservationsController.cs
+ * Project: Smart Solar Microgrid
+ * Description: Exposes reservation workflow endpoints for prosumers and grid operators.
+ * Author: Clerin - IT23402584
+ * Author: Thuverakan - IT23281332
+ */
+
 using System.Security.Claims;
 
 using Microsoft.AspNetCore.Authorization;
@@ -18,6 +26,8 @@ public class ReservationsController : ControllerBase
     public ReservationsController(
         IReservationService reservationService)
     {
+        // Responsible: Clerin - IT23402584
+        // Store the reservation workflow service used by each endpoint.
         _reservationService = reservationService;
     }
 
@@ -33,6 +43,8 @@ public class ReservationsController : ControllerBase
     public async Task<IActionResult> Create(
         [FromBody] CreateReservationDto request)
     {
+        // Responsible: Clerin - IT23402584
+        // Create a reservation for the authenticated prosumer.
         var prosumerNIC = GetCurrentUserNIC();
 
         var reservation =
@@ -57,6 +69,8 @@ public class ReservationsController : ControllerBase
     [Authorize(Roles = "GridOperator")]
     public async Task<IActionResult> GetAllReservations()
     {
+        // Responsible: Clerin - IT23402584
+        // Return all reservations to an authenticated grid operator.
         var reservations =
             await _reservationService
                 .GetAllReservationsAsync();
@@ -75,9 +89,12 @@ public class ReservationsController : ControllerBase
     // inside the service layer.
 
     [HttpGet("{id}")]
+    [Authorize(Roles = "Prosumer,GridOperator")]
     public async Task<IActionResult> GetById(
         string id)
     {
+        // Responsible: Clerin - IT23402584
+        // Return the reservation identified by the route value when it exists.
         var reservation =
             await _reservationService.GetByIdAsync(id);
 
@@ -87,6 +104,12 @@ public class ReservationsController : ControllerBase
             {
                 message = "Reservation not found."
             });
+        }
+
+        if (User.IsInRole("Prosumer") &&
+            reservation.ProsumerNIC != GetCurrentUserNIC())
+        {
+            return Forbid();
         }
 
         return Ok(reservation);
@@ -103,6 +126,8 @@ public class ReservationsController : ControllerBase
     [Authorize(Roles = "Prosumer")]
     public async Task<IActionResult> GetMyReservations()
     {
+        // Responsible: Clerin - IT23402584
+        // Return reservations belonging to the authenticated prosumer.
         var prosumerNIC = GetCurrentUserNIC();
 
         var reservations =
@@ -126,6 +151,8 @@ public class ReservationsController : ControllerBase
         string id,
         [FromBody] UpdateReservationDto request)
     {
+        // Responsible: Clerin - IT23402584
+        // Move an authenticated prosumer's reservation to the requested slot.
         var prosumerNIC = GetCurrentUserNIC();
 
         var reservation =
@@ -150,6 +177,8 @@ public class ReservationsController : ControllerBase
     public async Task<IActionResult> Cancel(
         string id)
     {
+        // Responsible: Clerin - IT23402584
+        // Cancel the authenticated prosumer's reservation.
         var prosumerNIC = GetCurrentUserNIC();
 
         await _reservationService.CancelAsync(
@@ -175,6 +204,8 @@ public class ReservationsController : ControllerBase
     public async Task<IActionResult> Approve(
         string id)
     {
+        // Responsible: Thuverakan - IT23281332
+        // Approve a pending reservation as the authenticated grid operator.
         var operatorNIC = GetCurrentUserNIC();
 
         var reservation =
@@ -196,6 +227,8 @@ public class ReservationsController : ControllerBase
     public async Task<IActionResult> Reject(
         string id)
     {
+        // Responsible: Clerin - IT23402584
+        // Reject a pending reservation as the authenticated grid operator.
         var operatorNIC = GetCurrentUserNIC();
 
         var reservation =
@@ -218,6 +251,8 @@ public class ReservationsController : ControllerBase
     public async Task<IActionResult> VerifyQR(
         [FromBody] string qrToken)
     {
+        // Responsible: Thuverakan - IT23281332
+        // Verify a reservation QR token as the authenticated grid operator.
         var operatorNIC = GetCurrentUserNIC();
 
         var reservation =
@@ -240,6 +275,8 @@ public class ReservationsController : ControllerBase
     public async Task<IActionResult> Complete(
         string id)
     {
+        // Responsible: Thuverakan - IT23281332
+        // Complete a verified energy transfer as the authenticated grid operator.
         var operatorNIC = GetCurrentUserNIC();
 
         var reservation =
@@ -258,6 +295,8 @@ public class ReservationsController : ControllerBase
 
     private string GetCurrentUserNIC()
     {
+        // Responsible: Clerin - IT23402584
+        // Read and validate the authenticated user's NIC claim.
         var nic =
             User.FindFirst(
                 ClaimTypes.NameIdentifier)?.Value;

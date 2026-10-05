@@ -1,6 +1,4 @@
-import {
-  NavLink,
-} from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 
 import useAuth from '../../hooks/useAuth'
 
@@ -8,11 +6,8 @@ import useAuth from '../../hooks/useAuth'
    Icons
 ===================================================== */
 
-function Icon({
-  name,
-}) {
-  const common =
-    'h-[18px] w-[18px]'
+function Icon({ name }) {
+  const common = 'h-[18px] w-[18px]'
 
   if (name === 'overview') {
     return (
@@ -22,6 +17,7 @@ function Icon({
         stroke="currentColor"
         strokeWidth="1.8"
         className={common}
+        aria-hidden="true"
       >
         <path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-9.5Z" />
       </svg>
@@ -36,6 +32,7 @@ function Icon({
         stroke="currentColor"
         strokeWidth="1.8"
         className={common}
+        aria-hidden="true"
       >
         <circle
           cx="12"
@@ -56,6 +53,7 @@ function Icon({
         stroke="currentColor"
         strokeWidth="1.8"
         className={common}
+        aria-hidden="true"
       >
         <circle
           cx="9"
@@ -80,6 +78,7 @@ function Icon({
         stroke="currentColor"
         strokeWidth="1.8"
         className={common}
+        aria-hidden="true"
       >
         <circle
           cx="12"
@@ -100,6 +99,7 @@ function Icon({
         stroke="currentColor"
         strokeWidth="1.8"
         className={common}
+        aria-hidden="true"
       >
         <circle
           cx="12"
@@ -120,6 +120,7 @@ function Icon({
         stroke="currentColor"
         strokeWidth="1.8"
         className={common}
+        aria-hidden="true"
       >
         <path d="M12 21s6-5 6-11a6 6 0 1 0-12 0c0 6 6 11 6 11Z" />
 
@@ -140,6 +141,7 @@ function Icon({
         stroke="currentColor"
         strokeWidth="1.8"
         className={common}
+        aria-hidden="true"
       >
         <rect
           x="4"
@@ -162,6 +164,7 @@ function Icon({
         stroke="currentColor"
         strokeWidth="1.8"
         className={common}
+        aria-hidden="true"
       >
         <rect
           x="4"
@@ -186,6 +189,7 @@ function Icon({
         stroke="currentColor"
         strokeWidth="2"
         className="h-5 w-5"
+        aria-hidden="true"
       >
         <path d="m14 7-5 5 5 5" />
       </svg>
@@ -213,9 +217,12 @@ function SidebarItem({
       end={end}
       onClick={onNavigate}
       aria-label={label}
-      className={({
-        isActive,
-      }) =>
+      title={
+        collapsed
+          ? label
+          : undefined
+      }
+      className={({ isActive }) =>
         [
           'group relative flex h-[44px] items-center rounded-xl transition-all duration-200',
 
@@ -229,12 +236,8 @@ function SidebarItem({
         ].join(' ')
       }
     >
-      {({
-        isActive,
-      }) => (
+      {({ isActive }) => (
         <>
-          {/* Icon */}
-
           <span
             className={[
               'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-200',
@@ -244,20 +247,14 @@ function SidebarItem({
                 : 'bg-white text-[#234E76] shadow-sm group-hover:bg-blue-50 group-hover:text-blue-700',
             ].join(' ')}
           >
-            <Icon
-              name={icon}
-            />
+            <Icon name={icon} />
           </span>
-
-          {/* Label */}
 
           {!collapsed && (
             <span className="min-w-0 flex-1 truncate text-[14px] font-semibold tracking-[-0.01em]">
               {label}
             </span>
           )}
-
-          {/* Active indicator */}
 
           {isActive &&
             !collapsed && (
@@ -305,8 +302,7 @@ function Sidebar({
   mobileOpen,
   onCloseMobile,
 }) {
-  const auth =
-    useAuth()
+  const auth = useAuth()
 
   const user =
     auth?.user ??
@@ -323,9 +319,10 @@ function Sidebar({
   const isGridOperator =
     role === 'GridOperator'
 
-  /* ===================================================
-     Correct Overview Route
-  ==================================================== */
+  /* -----------------------------------------------------
+     Each role must return to its own dashboard when the
+     Overview navigation item is selected.
+  ----------------------------------------------------- */
 
   const overviewPath =
     isBackoffice
@@ -382,9 +379,7 @@ function Sidebar({
               : ''
           }`}
         >
-          <Icon
-            name="collapse"
-          />
+          <Icon name="collapse" />
         </button>
       </div>
 
@@ -392,7 +387,7 @@ function Sidebar({
           NAVIGATION
       ================================================== */}
 
-      <div className="min-h-0 flex-1 overflow-hidden px-3">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
         {/* =================================================
             GENERAL
         ================================================== */}
@@ -401,8 +396,6 @@ function Sidebar({
           title="General"
           collapsed={collapsed}
         >
-          {/* Overview now points to actual role dashboard */}
-
           <SidebarItem
             to={overviewPath}
             icon="overview"
@@ -428,19 +421,10 @@ function Sidebar({
 
         {isBackoffice && (
           <>
-            {/* =============================================
-                USERS & ACCOUNTS MANAGEMENT
-            ============================================== */}
-
             <SidebarGroup
               title="Users & Accounts Management"
               collapsed={collapsed}
             >
-              {/* Exact route:
-                  does not stay selected on Pending or
-                  Deactivation pages.
-              */}
-
               <SidebarItem
                 to="/backoffice/users"
                 icon="users"
@@ -468,10 +452,6 @@ function Sidebar({
                 end
               />
             </SidebarGroup>
-
-            {/* =============================================
-                ENERGY MANAGEMENT
-            ============================================== */}
 
             <SidebarGroup
               title="Energy Management"
@@ -565,9 +545,7 @@ function Sidebar({
           <button
             type="button"
             aria-label="Close navigation"
-            onClick={
-              onCloseMobile
-            }
+            onClick={onCloseMobile}
             className="absolute inset-0 bg-slate-950/55 backdrop-blur-[2px]"
           />
 
