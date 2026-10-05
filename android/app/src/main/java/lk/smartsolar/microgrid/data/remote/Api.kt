@@ -254,6 +254,11 @@ interface ApiService {
         @Path("id") id: String,
     ): ReservationDto
 
+    @POST("reservations/{id}/reject")
+    suspend fun reject(
+        @Path("id") id: String,
+    ): ReservationDto
+
     // The backend expects the QR token as a bare JSON string.
     @POST("reservations/verify-qr")
     suspend fun verifyQr(

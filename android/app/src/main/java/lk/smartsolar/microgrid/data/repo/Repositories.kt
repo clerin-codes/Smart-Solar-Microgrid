@@ -539,6 +539,19 @@ class ReservationRepository(
                 .toEntity(),
         )
 
+    suspend fun reject(
+        id: String,
+    ): ReservationEntity =
+
+        store(
+            api.call {
+                it.reject(
+                    id,
+                )
+            }
+                .toEntity(),
+        )
+
     suspend fun verifyQr(
         token: String,
     ): ReservationEntity =
