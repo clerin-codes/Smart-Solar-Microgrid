@@ -16,6 +16,12 @@ val localProps = Properties().apply {
 val apiBaseUrl = localProps.getProperty("api.baseUrl") ?: "http://10.0.2.2:5130/api/"
 val mapsApiKey = localProps.getProperty("MAPS_API_KEY") ?: ""
 
+// Release signing, kept out of git in android/keystore.properties.
+val keystoreProps = Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
 android {
     namespace = "lk.smartsolar.microgrid"
     compileSdk {
@@ -41,8 +47,22 @@ android {
         buildConfig = true
     }
 
+    signingConfigs {
+        create("release") {
+            if (keystoreProps.getProperty("storeFile") != null) {
+                storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (keystoreProps.getProperty("storeFile") != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             optimization {
                 enable = false
             }

@@ -17,8 +17,8 @@ class QRViewModel(private val qrRepository: QRRepository) : ViewModel() {
     private val _qrGenerationState = MutableLiveData<QRGenerationState>()
     val qrGenerationState: LiveData<QRGenerationState> = _qrGenerationState
 
-    private val _qrData = MutableLiveData<QRDataModel>()
-    val qrData: LiveData<QRDataModel> = _qrData
+    private val _qrData = MutableLiveData<QRDataModel?>()
+    val qrData: LiveData<QRDataModel?> = _qrData
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
