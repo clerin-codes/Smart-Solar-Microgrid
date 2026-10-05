@@ -1,12 +1,10 @@
 /*
  * Smart Solar Microgrid Trading System
- * Author: Shakanyah - IT23214002
+ * Author: Sahanya - IT23214002
  * File: AuthController.cs
- * Purpose: Provides login, public registration, and own-profile
- *          and profile-picture management.
+ * Purpose: Exposes public authentication and Solar Prosumer registration endpoints.
  */
 
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,48 +13,85 @@ using SmartSolarMicrogrid.Api.Interfaces.Services;
 
 namespace SmartSolarMicrogrid.Api.Controllers;
 
+/// <summary>
+/// Handles public authentication operations.
+/// Login is available to supported system users, while public registration
+/// is limited to Solar Prosumers.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
+[Produces("application/json")]
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
     private readonly IUserService _userService;
 
+    /// <summary>
+    /// Initializes the authentication controller with the services required
+    /// for credential validation and Solar Prosumer registration.
+    /// </summary>
+    /// <param name="authService">
+    /// Service responsible for authentication and JWT generation.
+    /// </param>
+    /// <param name="userService">
+    /// Service responsible for Solar Prosumer account registration.
+    /// </param>
     public AuthController(
         IAuthService authService,
         IUserService userService)
     {
-        // Responsible: Shakanyah - IT23214002
-        // Store authentication and account services.
+        // Store the services used by the public authentication endpoints.
         _authService = authService;
         _userService = userService;
     }
 
+    /// <summary>
+    /// Authenticates a system user and returns a JWT when the supplied
+    /// credentials belong to an active account.
+    /// </summary>
+    /// <param name="request">
+    /// Login credentials submitted by the client.
+    /// </param>
+    /// <returns>
+    /// Authentication information including the generated JWT and user details.
+    /// </returns>
     [AllowAnonymous]
     [HttpPost("login")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login(
         [FromBody] LoginRequestDto request)
     {
-        // Responsible: Shakanyah - IT23214002
-        // Authenticate credentials and issue a JWT.
+        // Validate the credentials and issue a role-aware JWT for an active account.
         var response =
             await _authService.LoginAsync(request);
 
         return Ok(response);
     }
 
+    /// <summary>
+    /// Registers a Solar Prosumer account using the mobile registration flow.
+    /// Newly registered Prosumers remain pending until a Backoffice officer
+    /// activates the account.
+    /// </summary>
+    /// <param name="request">
+    /// Solar Prosumer registration information.
+    /// </param>
+    /// <returns>
+    /// The newly created pending Prosumer account together with a confirmation message.
+    /// </returns>
     [AllowAnonymous]
     [HttpPost("register-prosumer")]
-    public async Task<IActionResult>
-        RegisterProsumer(
-            [FromBody]
-            RegisterProsumerDto request)
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> RegisterProsumer(
+        [FromBody] RegisterProsumerDto request)
     {
-        // Responsible: Shakanyah - IT23214002
-        // Create a pending Prosumer account from the mobile registration flow.
+        // Create a pending Prosumer account that requires Backoffice activation.
         var user =
-            await _userService
-                .RegisterProsumerAsync(request);
+            await _userService.RegisterProsumerAsync(request);
 
         return StatusCode(
             StatusCodes.Status201Created,
@@ -64,92 +99,7 @@ public class AuthController : ControllerBase
             {
                 message =
                     "Registration successful. Your account is pending Backoffice activation.",
-
                 user
             });
-    }
-
-    // POST: /api/auth/register
-    [HttpPost("register")]
-    public async Task<IActionResult> Register(
-        [FromBody] RegisterRequestDto request)
-    {
-        // Responsible: Shakanyah - IT23214002
-        // Register an account and return its initial authentication result.
-        var response =
-            await _authService.RegisterAsync(request);
-
-        return StatusCode(
-            StatusCodes.Status201Created,
-            response);
-    }
-
-    // GET: /api/auth/profile
-    [HttpGet("profile")]
-    [Authorize]
-    public async Task<IActionResult> GetProfile()
-    {
-        // Responsible: Shakanyah - IT23214002
-        // Return the authenticated user's current profile.
-        var profile =
-            await _authService.GetProfileAsync(CurrentNic());
-
-        return Ok(profile);
-    }
-
-    // PUT: /api/auth/profile
-    [HttpPut("profile")]
-    [Authorize]
-    public async Task<IActionResult> UpdateProfile(
-        [FromBody] UpdateProfileRequestDto request)
-    {
-        // Responsible: Shakanyah - IT23214002
-        // Update editable fields on the authenticated user's profile.
-        var profile =
-            await _authService.UpdateProfileAsync(
-                CurrentNic(),
-                request);
-
-        return Ok(profile);
-    }
-
-    // PUT: /api/auth/profile/image
-    // Body: { "imageBase64": "<base64 of a JPEG, PNG or WebP>" }
-    [HttpPut("profile/image")]
-    [Authorize]
-    public async Task<IActionResult> UpdateProfileImage(
-        [FromBody] UpdateProfileImageRequestDto request)
-    {
-        // Responsible: Shakanyah - IT23214002
-        // Replace the authenticated user's profile image.
-        var profile =
-            await _authService.UpdateProfileImageAsync(
-                CurrentNic(),
-                request);
-
-        return Ok(profile);
-    }
-
-    // DELETE: /api/auth/profile/image
-    [HttpDelete("profile/image")]
-    [Authorize]
-    public async Task<IActionResult> RemoveProfileImage()
-    {
-        // Responsible: Shakanyah - IT23214002
-        // Remove the authenticated user's profile image.
-        var profile =
-            await _authService.RemoveProfileImageAsync(CurrentNic());
-
-        return Ok(profile);
-    }
-
-    private string CurrentNic()
-    {
-        // Responsible: Shakanyah - IT23214002
-        // Read and validate the authenticated user's NIC claim.
-        return User.FindFirst(
-            ClaimTypes.NameIdentifier)?.Value
-            ?? throw new UnauthorizedAccessException(
-                "Invalid token.");
     }
 }

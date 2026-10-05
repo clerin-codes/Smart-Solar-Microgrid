@@ -1,39 +1,311 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import logo from '../../assets/logo.png'
-import { useAuth } from '../../context/AuthContext'
+import {
+  useNavigate,
+} from 'react-router-dom'
 
-function Navbar() {
-  const [isProfileOpen, setIsProfileOpen] = useState(false)
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
+import useAuth from '../../hooks/useAuth'
 
-  const signOut = () => {
-    logout()
-    navigate('/login', { replace: true })
+/* =====================================================
+   Helpers
+===================================================== */
+
+/**
+ * Creates a short two-letter avatar value from the
+ * authenticated user's full name.
+ */
+function getInitials(
+  fullName = '',
+) {
+  const parts =
+    fullName
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+
+  if (
+    parts.length === 0
+  ) {
+    return 'U'
+  }
+
+  if (
+    parts.length === 1
+  ) {
+    return parts[0]
+      .slice(0, 2)
+      .toUpperCase()
+  }
+
+  return `${parts[0][0]}${
+    parts[
+      parts.length - 1
+    ][0]
+  }`.toUpperCase()
+}
+
+/**
+ * Converts backend role values into readable labels
+ * for display in the web portal.
+ */
+function getRoleLabel(role) {
+  if (
+    role === 'GridOperator'
+  ) {
+    return 'Grid Operator'
+  }
+
+  if (
+    role === 'Backoffice'
+  ) {
+    return 'Backoffice'
+  }
+
+  return role || 'User'
+}
+
+/* =====================================================
+   Icons
+===================================================== */
+
+function MenuIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </svg>
+  )
+}
+
+function LogoutIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
+      <path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4" />
+
+      <path d="m14 8 4 4-4 4" />
+
+      <path d="M18 12H9" />
+    </svg>
+  )
+}
+
+/* =====================================================
+   Navbar
+===================================================== */
+
+/**
+ * Displays the application brand, authenticated user
+ * identity, mobile navigation trigger and logout action.
+ */
+function Navbar({
+  onOpenMobileMenu,
+}) {
+  const auth =
+    useAuth()
+
+  const navigate =
+    useNavigate()
+
+  const user =
+    auth?.user ??
+    auth?.currentUser ??
+    auth?.authUser ??
+    null
+
+  const fullName =
+    user?.fullName ??
+    user?.name ??
+    'User'
+
+  const role =
+    user?.role ??
+    ''
+
+  const initials =
+    getInitials(
+      fullName,
+    )
+
+  /* ===================================================
+     Logout
+  ==================================================== */
+
+  /**
+   * Clears the authenticated client session and returns
+   * the user to the public login page.
+   */
+  async function handleLogout() {
+    /*
+     * Prefer the logout function exposed by the current
+     * authentication provider.
+     */
+
+    if (
+      typeof auth?.logout ===
+      'function'
+    ) {
+      await auth.logout()
+
+      navigate(
+        '/login',
+        {
+          replace: true,
+        },
+      )
+
+      return
+    }
+
+    /*
+     * Support an alternative auth provider implementation
+     * that exposes signOut rather than logout.
+     */
+
+    if (
+      typeof auth?.signOut ===
+      'function'
+    ) {
+      await auth.signOut()
+
+      navigate(
+        '/login',
+        {
+          replace: true,
+        },
+      )
+
+      return
+    }
+
+    /*
+     * Defensive fallback prevents stale authentication
+     * information remaining in local storage.
+     */
+
+    localStorage.removeItem(
+      'accessToken',
+    )
+
+    localStorage.removeItem(
+      'authUser',
+    )
+
+    navigate(
+      '/login',
+      {
+        replace: true,
+      },
+    )
   }
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur sm:px-6">
-      <img src={logo} alt="SunChain" className="h-10 w-auto object-contain" />
-      <div className="flex items-center gap-3">
-        <span className="hidden rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 md:inline-flex">{user.role === 'GridOperator' ? 'Grid Operator workspace' : 'Backoffice workspace'}</span>
-        <div className="relative">
-          <button type="button" onClick={() => setIsProfileOpen((open) => !open)} className="flex items-center gap-3 rounded-xl p-1.5 transition hover:bg-slate-100" aria-expanded={isProfileOpen}>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-slate-900 font-semibold text-white shadow-sm">{user.fullName?.charAt(0).toUpperCase() || 'U'}</div>
-            <div className="hidden text-left sm:block">
-              <p className="text-sm font-semibold text-slate-800">{user.fullName}</p>
-              <p className="text-xs text-slate-500">{user.role === 'GridOperator' ? 'Grid Operator' : user.role}</p>
-            </div>
-            <span className="text-xs text-slate-500">⌄</span>
+    <header className="sticky top-0 z-40 flex h-[76px] shrink-0 items-center border-b border-slate-200 bg-white px-4 shadow-[0_1px_3px_rgba(15,23,42,0.04)] sm:px-6">
+      <div className="flex w-full items-center justify-between gap-5">
+        {/* =================================================
+            LEFT SIDE
+        ================================================== */}
+
+        <div className="flex min-w-0 items-center gap-3">
+          {/* Mobile navigation button */}
+
+          <button
+            type="button"
+            onClick={
+              onOpenMobileMenu
+            }
+            aria-label="Open navigation"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 lg:hidden"
+          >
+            <MenuIcon />
           </button>
-          {isProfileOpen && (
-            <div className="absolute right-0 top-14 z-50 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-2 shadow-xl">
-              <div className="px-4 py-2 text-xs leading-5 text-slate-500">Signed in as<br/><strong className="text-slate-800">{user.nic}</strong></div>
-              <div className="my-1 border-t border-slate-100" />
-              <button type="button" onClick={signOut} className="w-full px-4 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50">Sign out</button>
+
+          {/* Application branding */}
+
+          <div className="flex min-w-0 items-center">
+            <div className="shrink-0 select-none text-[27px] font-extrabold tracking-[-0.06em]">
+              <span className="text-orange-500">
+                Sun
+              </span>
+
+              <span className="text-blue-800">
+                Chain
+              </span>
             </div>
-          )}
+
+            {/* Divider */}
+
+            <div className="mx-4 hidden h-8 w-px bg-slate-200 sm:block" />
+
+            {/* Product information */}
+
+            <div className="hidden min-w-0 sm:block">
+              <p className="truncate text-[15px] font-semibold text-slate-900">
+                Smart Solar Microgrid
+              </p>
+
+              <p className="mt-0.5 text-xs font-medium text-slate-400">
+                Operations Console
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* =================================================
+            RIGHT SIDE
+        ================================================== */}
+
+        <div className="flex shrink-0 items-center gap-2.5">
+          {/* =================================================
+              AUTHENTICATED USER INFORMATION
+          ================================================== */}
+
+          <div className="flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white px-2.5 py-2 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+            {/* User initials */}
+
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-900 text-[13px] font-bold uppercase tracking-[0.04em] text-white">
+              {initials}
+            </div>
+
+            {/* User name and role */}
+
+            <div className="hidden min-w-0 pr-2 text-left sm:block">
+              <p className="max-w-[205px] truncate text-[14px] font-semibold leading-5 text-slate-900">
+                {fullName}
+              </p>
+
+              <p className="mt-0.5 text-xs font-medium text-slate-500">
+                {getRoleLabel(
+                  role,
+                )}
+              </p>
+            </div>
+          </div>
+
+          {/* =================================================
+              LOGOUT
+          ================================================== */}
+
+          <button
+            type="button"
+            onClick={
+              handleLogout
+            }
+            aria-label="Logout"
+            className="flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-600 transition-all duration-200 hover:border-red-300 hover:bg-red-100 hover:text-red-700 focus:outline-none focus:ring-4 focus:ring-red-50"
+          >
+            <LogoutIcon />
+          </button>
         </div>
       </div>
     </header>
